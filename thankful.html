@@ -1,0 +1,970 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Her — Orientation Opening Table</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: #080b09;
+    color: #e7f5eb;
+    font-family: Arial, sans-serif;
+}
+
+/* HEADER */
+header {
+    padding: 20px;
+    background: #101512;
+    border-bottom: 1px solid #304b3a;
+}
+
+h1 {
+    margin: 0;
+    font-size: 23px;
+}
+
+.subtitle {
+    margin-top: 7px;
+    color: #789a82;
+    font-size: 13px;
+}
+
+/* CONTROLS */
+.controls {
+    padding: 14px 20px;
+    display: flex;
+    gap: 10px;
+    background: #0d120f;
+    border-bottom: 1px solid #304b3a;
+}
+
+button {
+    background: #152019;
+    color: #c9f7d5;
+    border: 1px solid #41664d;
+    padding: 9px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #203326;
+}
+
+.clear-button {
+    border-color: #704040;
+    color: #ffaaaa;
+}
+
+/* TABLE AREA */
+.table-wrap {
+    padding: 20px;
+    overflow-x: auto;
+}
+
+/* EACH OPENING */
+.opening {
+    margin-bottom: 18px;
+    border: 1px solid #35513e;
+    border-radius: 7px;
+    overflow: hidden;
+    background: #0c110e;
+}
+
+/* OPENING HEADER */
+.opening-header {
+    display: grid;
+    grid-template-columns: 105px minmax(250px, 1fr) 110px;
+    align-items: center;
+    background: #17201a;
+    border-bottom: 1px solid #35513e;
+}
+
+.opening-number {
+    padding: 13px;
+    color: #8fd19e;
+    font-weight: bold;
+    border-right: 1px solid #35513e;
+    text-align: center;
+}
+
+.opening-name {
+    padding: 10px;
+}
+
+.opening-name input {
+    width: 100%;
+    background: #090c0a;
+    border: 1px solid #314a38;
+    color: #e0f8e6;
+    padding: 9px;
+    border-radius: 4px;
+}
+
+.remove-opening {
+    height: 100%;
+    border: 0;
+    border-left: 1px solid #704040;
+    border-radius: 0;
+    color: #ff9d9d;
+    background: #1b1010;
+}
+
+.remove-opening:hover {
+    background: #351717;
+}
+
+/* COLUMNS */
+.columns {
+    display: grid;
+    grid-template-columns:
+        1fr
+        1fr
+        1.25fr
+        1.4fr;
+}
+
+.column {
+    min-width: 230px;
+    border-right: 1px solid #2c4233;
+}
+
+.column:last-child {
+    border-right: none;
+}
+
+.column-title {
+    padding: 11px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: #121a15;
+    border-bottom: 1px solid #2c4233;
+}
+
+.column-content {
+    padding: 12px;
+}
+
+.inward .column-title {
+    color: #77e6d0;
+}
+
+.outward .column-title {
+    color: #ff9e75;
+}
+
+.relationship .column-title {
+    color: #ffc979;
+}
+
+.notes .column-title {
+    color: #c99cff;
+}
+
+/* INPUTS */
+input,
+textarea {
+    width: 100%;
+    background: #080b09;
+    color: #e0f8e6;
+    border: 1px solid #314a38;
+    border-radius: 4px;
+    padding: 9px;
+    font-family: Arial, sans-serif;
+}
+
+input:focus,
+textarea:focus {
+    outline: 1px solid #71c889;
+    border-color: #71c889;
+}
+
+textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+/* RADIO ORIENTATION AREA */
+.orientation-box {
+    border: 1px solid #293c2e;
+    border-radius: 5px;
+    padding: 10px;
+    background: #0a0f0c;
+}
+
+.orientation-title {
+    color: #a8c8b0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 9px;
+}
+
+.radio-row {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.radio-option:hover {
+    background: #142018;
+}
+
+.radio-option input[type="radio"] {
+    width: auto;
+    margin: 0;
+    accent-color: #71c889;
+}
+
+.radio-label {
+    font-size: 12px;
+}
+
+/* RADIO COLORS */
+.forward-label {
+    color: #ffc979;
+}
+
+.backward-label {
+    color: #c99cff;
+}
+
+.inward-label {
+    color: #77e6d0;
+}
+
+.outward-label {
+    color: #ff9e75;
+}
+
+.neutral-label {
+    color: #a9b5ac;
+}
+
+/* FROM / TO */
+.relationship-field {
+    margin-bottom: 14px;
+}
+
+.relationship-field:last-child {
+    margin-bottom: 0;
+}
+
+.relationship-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.from-label {
+    color: #9ee8ad;
+}
+
+.to-label {
+    color: #8ecbff;
+}
+
+/* DIRECTION DISPLAY */
+.direction-line {
+    margin-top: 12px;
+    text-align: center;
+    color: #8caa94;
+    font-size: 12px;
+    padding: 8px;
+    border: 1px solid #293c2e;
+    background: #0b100d;
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+}
+
+.direction-from {
+    color: #9ee8ad;
+    font-weight: bold;
+}
+
+.direction-to {
+    color: #8ecbff;
+    font-weight: bold;
+}
+
+/* EMPTY */
+.empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #66806e;
+    border: 1px dashed #304b3a;
+    border-radius: 7px;
+}
+
+/* MOBILE */
+@media (max-width: 800px) {
+
+    .columns {
+        grid-template-columns: 1fr;
+    }
+
+    .column {
+        border-right: none;
+        border-bottom: 1px solid #2c4233;
+    }
+
+    .column:last-child {
+        border-bottom: none;
+    }
+
+    .opening-header {
+        grid-template-columns: 85px 1fr 90px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>HER — Orientation Opening Table</h1>
+
+    <div class="subtitle">
+        Store each opening, orientation, relationship, direction, and notes.
+    </div>
+</header>
+
+
+<!-- CONTROLS -->
+
+<div class="controls">
+
+    <button onclick="addOpening()">
+        ＋ NEW OPENING
+    </button>
+
+    <button
+        class="clear-button"
+        onclick="clearAll()"
+    >
+        CLEAR ALL
+    </button>
+
+</div>
+
+
+<!-- OPENINGS -->
+
+<div
+    class="table-wrap"
+    id="openings"
+></div>
+
+
+<script>
+
+let openingCount = 0;
+
+
+/* =========================================
+   ADD OPENING
+========================================= */
+
+function addOpening() {
+
+    openingCount++;
+
+    const container =
+        document.getElementById("openings");
+
+    /*
+       Remove empty message if present
+    */
+
+    const empty =
+        container.querySelector(".empty");
+
+    if (empty) {
+        empty.remove();
+    }
+
+
+    const opening =
+        document.createElement("div");
+
+    opening.className = "opening";
+
+
+    /*
+       Unique radio group for this opening.
+       This prevents radio buttons from one
+       opening affecting another opening.
+    */
+
+    const radioName =
+        "orientation_" + openingCount;
+
+
+    opening.innerHTML = `
+
+        <!-- =================================
+             OPENING HEADER
+        ================================== -->
+
+        <div class="opening-header">
+
+            <div class="opening-number">
+                OPENING ${openingCount}
+            </div>
+
+
+            <div class="opening-name">
+
+                <input
+                    type="text"
+                    placeholder="Name / thing about her..."
+                >
+
+            </div>
+
+
+            <button
+                class="remove-opening"
+                onclick="removeOpening(this)"
+            >
+                REMOVE
+            </button>
+
+        </div>
+
+
+
+        <!-- =================================
+             COLUMNS
+        ================================== -->
+
+        <div class="columns">
+
+
+            <!-- =================================
+                 INWARD ORIENTATION
+            ================================== -->
+
+            <div class="column inward">
+
+                <div class="column-title">
+                    Inward Orientation
+                </div>
+
+                <div class="column-content">
+
+                    <textarea
+                        placeholder="What is directed inward?"
+                    ></textarea>
+
+
+                    <br><br>
+
+
+                    <!-- RADIO BUTTONS -->
+
+                    <div class="orientation-box">
+
+                        <div class="orientation-title">
+                            Orientation
+                        </div>
+
+
+                        <div class="radio-row">
+
+
+                            <label class="radio-option">
+
+                                <input
+                                    type="radio"
+                                    name="${radioName}"
+                                    value="Forward"
+                                    onchange="updateOrientation(this)"
+                                >
+
+                                <span class="radio-label forward-label">
+                                    Forward
+                                </span>
+
+                            </label>
+
+
+                            <label class="radio-option">
+
+                                <input
+                                    type="radio"
+                                    name="${radioName}"
+                                    value="Backward"
+                                    onchange="updateOrientation(this)"
+                                >
+
+                                <span class="radio-label backward-label">
+                                    Backward
+                                </span>
+
+                            </label>
+
+
+                            <label class="radio-option">
+
+                                <input
+                                    type="radio"
+                                    name="${radioName}"
+                                    value="Inward"
+                                    onchange="updateOrientation(this)"
+                                >
+
+                                <span class="radio-label inward-label">
+                                    Inward
+                                </span>
+
+                            </label>
+
+
+                            <label class="radio-option">
+
+                                <input
+                                    type="radio"
+                                    name="${radioName}"
+                                    value="Outward"
+                                    onchange="updateOrientation(this)"
+                                >
+
+                                <span class="radio-label outward-label">
+                                    Outward
+                                </span>
+
+                            </label>
+
+
+                            <label class="radio-option">
+
+                                <input
+                                    type="radio"
+                                    name="${radioName}"
+                                    value="Neutral"
+                                    onchange="updateOrientation(this)"
+                                >
+
+                                <span class="radio-label neutral-label">
+                                    Neutral
+                                </span>
+
+                            </label>
+
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================
+                 OUTWARD ORIENTATION
+            ================================== -->
+
+            <div class="column outward">
+
+                <div class="column-title">
+                    Outward Orientation
+                </div>
+
+                <div class="column-content">
+
+                    <textarea
+                        placeholder="What is directed outward?"
+                    ></textarea>
+
+
+                    <br><br>
+
+
+                    <div class="orientation-box">
+
+                        <div class="orientation-title">
+                            Selected Orientation
+                        </div>
+
+                        <div
+                            class="selected-orientation"
+                            style="
+                                padding:10px;
+                                text-align:center;
+                                color:#8caa94;
+                                border:1px solid #293c2e;
+                                border-radius:4px;
+                            "
+                        >
+                            None
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================
+                 RELATIONSHIP
+            ================================== -->
+
+            <div class="column relationship">
+
+                <div class="column-title">
+                    Relationship
+                </div>
+
+
+                <div class="column-content">
+
+
+                    <!-- FROM -->
+
+                    <div class="relationship-field">
+
+                        <label class="relationship-label from-label">
+                            FROM
+                        </label>
+
+                        <input
+                            type="text"
+                            placeholder="From..."
+                            oninput="updateDirection(this)"
+                        >
+
+                    </div>
+
+
+
+                    <!-- TO -->
+
+                    <div class="relationship-field">
+
+                        <label class="relationship-label to-label">
+                            TO
+                        </label>
+
+                        <input
+                            type="text"
+                            placeholder="To..."
+                            oninput="updateDirection(this)"
+                        >
+
+                    </div>
+
+
+
+                    <!-- FROM → TO -->
+
+                    <div class="direction-line">
+
+                        <span class="direction-from">
+                            FROM
+                        </span>
+
+                        →
+
+                        <span class="direction-to">
+                            TO
+                        </span>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================
+                 NOTES
+            ================================== -->
+
+            <div class="column notes">
+
+                <div class="column-title">
+                    Notes
+                </div>
+
+
+                <div class="column-content">
+
+                    <textarea
+                        placeholder="Additional information about this opening..."
+                    ></textarea>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    `;
+
+
+    container.appendChild(opening);
+
+    renumberOpenings();
+}
+
+
+
+/* =========================================
+   REMOVE ONE OPENING
+========================================= */
+
+function removeOpening(button) {
+
+    const opening =
+        button.closest(".opening");
+
+    opening.remove();
+
+    renumberOpenings();
+}
+
+
+
+/* =========================================
+   RENUMBER
+========================================= */
+
+function renumberOpenings() {
+
+    const openings =
+        document.querySelectorAll(".opening");
+
+
+    openings.forEach(
+        (opening, index) => {
+
+            opening.querySelector(
+                ".opening-number"
+            ).textContent =
+                "OPENING " + (index + 1);
+
+        }
+    );
+
+
+    openingCount =
+        openings.length;
+
+
+    showEmptyState();
+}
+
+
+
+/* =========================================
+   EMPTY STATE
+========================================= */
+
+function showEmptyState() {
+
+    const container =
+        document.getElementById("openings");
+
+    const openings =
+        document.querySelectorAll(".opening");
+
+    const empty =
+        container.querySelector(".empty");
+
+
+    if (
+        openings.length === 0 &&
+        !empty
+    ) {
+
+        container.innerHTML = `
+
+            <div class="empty">
+
+                No openings yet.
+
+                <br><br>
+
+                Click
+                <b>＋ NEW OPENING</b>
+                to create one.
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+
+/* =========================================
+   CLEAR ALL
+========================================= */
+
+function clearAll() {
+
+    const openings =
+        document.querySelectorAll(".opening");
+
+
+    if (openings.length === 0) {
+        return;
+    }
+
+
+    if (
+        confirm(
+            "Remove all openings?"
+        )
+    ) {
+
+        document.getElementById(
+            "openings"
+        ).innerHTML = "";
+
+        openingCount = 0;
+
+        showEmptyState();
+
+    }
+
+}
+
+
+
+/* =========================================
+   FROM → TO DISPLAY
+========================================= */
+
+function updateDirection(input) {
+
+    const opening =
+        input.closest(".opening");
+
+
+    const inputs =
+        opening.querySelectorAll(
+            ".relationship-field input"
+        );
+
+
+    const from =
+        inputs[0].value.trim();
+
+    const to =
+        inputs[1].value.trim();
+
+
+    const display =
+        opening.querySelector(
+            ".direction-line"
+        );
+
+
+    display.innerHTML = `
+
+        <span class="direction-from">
+            ${escapeHTML(from || "FROM")}
+        </span>
+
+        →
+
+        <span class="direction-to">
+            ${escapeHTML(to || "TO")}
+        </span>
+
+    `;
+
+}
+
+
+
+/* =========================================
+   RADIO BUTTON ORIENTATION
+========================================= */
+
+function updateOrientation(radio) {
+
+    const opening =
+        radio.closest(".opening");
+
+
+    const selected =
+        opening.querySelector(
+            ".selected-orientation"
+        );
+
+
+    selected.textContent =
+        radio.value;
+
+
+    /*
+       Keep the selected orientation visible
+       inside this specific opening only.
+    */
+
+    selected.style.color =
+        "#c9f7d5";
+
+}
+
+
+
+/* =========================================
+   HTML SAFETY
+========================================= */
+
+function escapeHTML(value) {
+
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
+
+
+
+/* =========================================
+   START WITH ONE OPENING
+========================================= */
+
+addOpening();
+
+</script>
+
+</body>
+</html>
+```

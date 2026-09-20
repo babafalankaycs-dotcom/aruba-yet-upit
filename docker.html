@@ -1,0 +1,2678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker Recursive Research Workspace</title>
+
+<style>
+:root{
+  --side-width:220px;
+  --bg:#0b0d10;
+  --panel:#11151a;
+  --panel2:#171c22;
+  --border:#2b323b;
+  --text:#edf2f7;
+  --muted:#8f9aa7;
+  --accent:#6ea8ff;
+}
+
+*{
+  box-sizing:border-box;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  width:100%;
+  min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+  overflow-x:hidden;
+  padding-left:var(--side-width);
+}
+
+/* =========================
+   LEFT DOCKER SIDEBAR
+   ========================= */
+
+.gordon-sidebar{
+  position:fixed;
+  left:0;
+  top:0;
+  bottom:0;
+  width:var(--side-width);
+  background:#090b0e;
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+  overflow-x:hidden;
+  z-index:1000;
+}
+
+.sidebar-title{
+  padding:18px 14px;
+  font-size:18px;
+  font-weight:700;
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:0;
+  background:#090b0e;
+  z-index:5;
+}
+
+.gordon-side-tab{
+  display:block;
+  width:100%;
+  border:0;
+  border-bottom:1px solid #1b2026;
+  background:transparent;
+  color:#aeb8c4;
+  padding:14px 16px;
+  text-align:left;
+  cursor:pointer;
+  font-size:14px;
+  transition:.15s ease;
+}
+
+.gordon-side-tab:hover{
+  background:#151a20;
+  color:#fff;
+}
+
+.gordon-side-tab.active{
+  background:#1c2530;
+  color:#fff;
+  border-left:3px solid var(--accent);
+  padding-left:13px;
+}
+
+/* =========================
+   RIGHT SIDE
+   ========================= */
+
+.gordon-stage{
+  min-height:100vh;
+  width:100%;
+}
+
+.gordon-panel{
+  display:none;
+  min-height:100vh;
+}
+
+.gordon-panel.active{
+  display:block;
+}
+
+.gordon-panel-header{
+  position:sticky;
+  top:0;
+  z-index:50;
+  padding:16px 20px;
+  background:#0d1116;
+  border-bottom:1px solid var(--border);
+  font-size:20px;
+  font-weight:700;
+}
+
+.recursive-host{
+  width:100%;
+  min-height:calc(100vh - 57px);
+}
+
+.recursive-engine{
+  width:100%;
+  min-height:calc(100vh - 57px);
+}
+
+/* =========================
+   TOOLBAR
+   ========================= */
+
+.toolbar{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  padding:12px 16px;
+  background:#101419;
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:57px;
+  z-index:40;
+}
+
+.engine-btn{
+  border:1px solid #343d47;
+  background:#1a2027;
+  color:#e9eef4;
+  padding:8px 12px;
+  border-radius:7px;
+  cursor:pointer;
+  font-size:13px;
+}
+
+.engine-btn:hover{
+  background:#242c35;
+}
+
+.engine-btn:active{
+  transform:translateY(1px);
+}
+
+/* =========================
+   ROOT INPUT
+   ========================= */
+
+.root-input-area{
+  padding:16px;
+  display:flex;
+  gap:10px;
+  flex-direction:column;
+  border-bottom:1px solid var(--border);
+  background:#0d1115;
+}
+
+.root-input{
+  width:100%;
+  min-height:110px;
+  resize:vertical;
+  padding:12px;
+  border:1px solid #343d47;
+  border-radius:8px;
+  background:#080a0d;
+  color:#fff;
+  outline:none;
+  font:14px/1.5 Arial,sans-serif;
+}
+
+.root-input:focus{
+  border-color:var(--accent);
+}
+
+.workspace{
+  padding:16px;
+}
+
+.workspace-content{
+  min-height:300px;
+}
+
+.empty-message{
+  padding:35px;
+  text-align:center;
+  color:var(--muted);
+  border:1px dashed #303841;
+  border-radius:10px;
+}
+
+/* =========================
+   PARAGRAPHS / WORDS
+   ========================= */
+
+.paragraph-row{
+  margin-bottom:18px;
+}
+
+.paragraph{
+  line-height:2.4;
+  word-break:break-word;
+}
+
+.word-container{
+  display:inline-block;
+  position:relative;
+}
+
+.word{
+  border:0;
+  background:transparent;
+  color:#8db9ff;
+  cursor:pointer;
+  padding:2px 4px;
+  border-radius:4px;
+  font:inherit;
+}
+
+.word:hover{
+  background:#1d2a3a;
+  color:#fff;
+}
+
+.letters-area{
+  margin-top:12px;
+  padding:10px;
+  border-left:2px solid #28323d;
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+}
+
+.letters-title{
+  width:100%;
+  color:var(--muted);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.letter-wrapper{
+  position:relative;
+  display:inline-block;
+}
+
+.letter{
+  border:1px solid #303944;
+  background:#151a20;
+  color:#dce5ee;
+  border-radius:5px;
+  padding:4px 7px;
+  cursor:pointer;
+}
+
+.letter:hover{
+  background:#26303b;
+}
+
+/* =========================
+   RESEARCH BOX
+   ========================= */
+
+.research-box{
+  width:520px;
+  max-width:calc(100vw - 260px);
+  margin:12px 0 12px 8px;
+  padding:12px;
+  background:#11171d;
+  border:1px solid #35404b;
+  border-radius:10px;
+  box-shadow:0 8px 25px rgba(0,0,0,.28);
+  font-size:14px;
+  position:relative;
+}
+
+.box-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.box-title{
+  font-weight:700;
+  color:#fff;
+  cursor:pointer;
+}
+
+.close-box{
+  border:0;
+  background:#25171a;
+  color:#ffb7bd;
+  width:28px;
+  height:28px;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+.box-path{
+  color:#778390;
+  font-size:11px;
+  margin:6px 0 12px;
+  overflow-wrap:anywhere;
+}
+
+/* =========================
+   LOCAL TABS
+   ========================= */
+
+.tabs{
+  display:flex;
+  gap:4px;
+  overflow-x:auto;
+  padding-bottom:5px;
+  scrollbar-width:thin;
+}
+
+.tab{
+  flex:0 0 auto;
+  border:1px solid #303944;
+  background:#151a20;
+  color:#9da8b4;
+  padding:7px 9px;
+  border-radius:6px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+.tab:hover{
+  color:#fff;
+  background:#202730;
+}
+
+.tab.active{
+  background:#273444;
+  color:#fff;
+  border-color:#52677e;
+}
+
+.tab-contents{
+  margin-top:8px;
+}
+
+.tab-content{
+  display:none;
+  padding:12px;
+  border:1px solid #272f38;
+  border-radius:7px;
+  background:#0c1014;
+  color:#aeb8c4;
+  line-height:1.5;
+}
+
+.tab-content.active{
+  display:block;
+}
+
+.research-placeholder strong{
+  color:#fff;
+}
+
+.local-tab-editor{
+  margin-top:10px;
+  padding:10px;
+  background:#0c1014;
+  border:1px solid #252d35;
+  border-radius:7px;
+}
+
+.local-tab-title{
+  color:#8e9aa6;
+  font-size:11px;
+  margin-bottom:7px;
+  text-transform:uppercase;
+}
+
+.local-tab-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+
+.local-tab-edit-row input{
+  width:120px;
+  padding:6px 7px;
+  border:1px solid #303944;
+  border-radius:5px;
+  background:#151a20;
+  color:#fff;
+}
+
+.add-local-tab{
+  margin-top:8px;
+  border:1px solid #303944;
+  background:#171d24;
+  color:#dbe4ed;
+  border-radius:5px;
+  padding:6px 9px;
+  cursor:pointer;
+}
+
+/* =========================
+   SIZE CONTROLS
+   ========================= */
+
+.box-size-mount{
+  margin-top:10px;
+}
+
+.box-size-controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  padding:9px;
+  margin-top:8px;
+  border:1px solid #252d35;
+  border-radius:7px;
+  background:#0b0f13;
+}
+
+.box-size-controls label{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  color:#8f9aa7;
+  font-size:11px;
+}
+
+.box-size-controls input[type="range"]{
+  width:85px;
+}
+
+.reset-size{
+  border:1px solid #303944;
+  background:#171d24;
+  color:#dbe4ed;
+  padding:6px 8px;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+/* =========================
+   NESTED RESEARCH
+   ========================= */
+
+.nested-area{
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid #252d35;
+}
+
+.nested-input{
+  width:100%;
+  min-height:75px;
+  resize:vertical;
+  padding:9px;
+  border:1px solid #303944;
+  border-radius:6px;
+  background:#080a0d;
+  color:#fff;
+  font:13px/1.4 Arial,sans-serif;
+  margin-bottom:7px;
+}
+
+.nested-paragraph{
+  margin-top:10px;
+  line-height:2;
+}
+
+/* =========================
+   LEVEL
+   ========================= */
+
+.level-content{
+  text-align:center;
+  padding:12px;
+}
+
+.level-title{
+  color:#8f9aa7;
+  font-size:11px;
+  text-transform:uppercase;
+}
+
+.level-number{
+  font-size:32px;
+  font-weight:700;
+  color:#fff;
+  margin:8px;
+}
+
+.level-path{
+  color:#7f8b97;
+  font-size:11px;
+  overflow-wrap:anywhere;
+}
+
+/* =========================
+   3D FACE
+   ========================= */
+
+.face-container{
+  display:none;
+}
+
+.face-tab-content .face-container{
+  display:block;
+}
+
+.face-editor-area{
+  width:100%;
+}
+
+.face-controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  padding:10px;
+  border-bottom:1px solid #252d35;
+}
+
+.face-controls label{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-size:11px;
+  color:#9aa5b1;
+}
+
+.face-controls input[type="range"]{
+  width:75px;
+}
+
+.face-reset{
+  border:1px solid #303944;
+  background:#171d24;
+  color:#dbe4ed;
+  padding:6px 9px;
+  border-radius:5px;
+  cursor:pointer;
+}
+
+.face-canvas{
+  display:block;
+  width:100%;
+  height:400px;
+  background:#07090c;
+}
+
+/* =========================
+   SELECTION
+   ========================= */
+
+.selection-bar{
+  position:fixed;
+  left:var(--side-width);
+  right:0;
+  bottom:0;
+  z-index:900;
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 14px;
+  background:#090c10;
+  border-top:1px solid #303841;
+  box-shadow:0 -5px 20px rgba(0,0,0,.25);
+}
+
+.selection-label{
+  color:#778390;
+  font-size:11px;
+  text-transform:uppercase;
+}
+
+.selection-path{
+  color:#dce5ee;
+  font-size:12px;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media(max-width:700px){
+
+  :root{
+    --side-width:155px;
+  }
+
+  .gordon-sidebar{
+    width:var(--side-width);
+  }
+
+  .gordon-side-tab{
+    font-size:12px;
+    padding:12px 9px;
+  }
+
+  .gordon-panel-header{
+    font-size:16px;
+  }
+
+  .research-box{
+    width:100%;
+    max-width:100%;
+    margin-left:0;
+  }
+
+  .selection-bar{
+    left:var(--side-width);
+  }
+
+}
+</style>
+</head>
+
+<body>
+
+<!-- =====================================================
+     ONE LEFT SIDEBAR
+     ===================================================== -->
+
+<aside class="gordon-sidebar">
+
+  <div class="sidebar-title">
+    Docker
+  </div>
+
+  <button class="gordon-side-tab active" data-panel="gordon">
+    Gordon
+  </button>
+
+  <button class="gordon-side-tab" data-panel="containers">
+    Containers
+  </button>
+
+  <button class="gordon-side-tab" data-panel="images">
+    Images
+  </button>
+
+  <button class="gordon-side-tab" data-panel="logs">
+    Logs
+  </button>
+
+  <button class="gordon-side-tab" data-panel="volumes">
+    Volumes
+  </button>
+
+  <button class="gordon-side-tab" data-panel="kubernetes">
+    Kubernetes
+  </button>
+
+  <button class="gordon-side-tab" data-panel="builds">
+    Builds
+  </button>
+
+  <button class="gordon-side-tab" data-panel="models">
+    Models
+  </button>
+
+  <button class="gordon-side-tab" data-panel="mcp">
+    MCP Toolkit
+  </button>
+
+  <button class="gordon-side-tab" data-panel="dockerhub">
+    Docker Hub
+  </button>
+
+</aside>
+
+
+<!-- =====================================================
+     ONE APPLICATION WORKSPACE
+     ===================================================== -->
+
+<main class="gordon-stage">
+
+  <section id="panel-gordon" class="gordon-panel active">
+    <div class="gordon-panel-header">Gordon</div>
+    <div class="recursive-host" data-engine="gordon"></div>
+  </section>
+
+  <section id="panel-containers" class="gordon-panel">
+    <div class="gordon-panel-header">Containers</div>
+    <div class="recursive-host" data-engine="containers"></div>
+  </section>
+
+  <section id="panel-images" class="gordon-panel">
+    <div class="gordon-panel-header">Images</div>
+    <div class="recursive-host" data-engine="images"></div>
+  </section>
+
+  <section id="panel-logs" class="gordon-panel">
+    <div class="gordon-panel-header">Logs</div>
+    <div class="recursive-host" data-engine="logs"></div>
+  </section>
+
+  <section id="panel-volumes" class="gordon-panel">
+    <div class="gordon-panel-header">Volumes</div>
+    <div class="recursive-host" data-engine="volumes"></div>
+  </section>
+
+  <section id="panel-kubernetes" class="gordon-panel">
+    <div class="gordon-panel-header">Kubernetes</div>
+    <div class="recursive-host" data-engine="kubernetes"></div>
+  </section>
+
+  <section id="panel-builds" class="gordon-panel">
+    <div class="gordon-panel-header">Builds</div>
+    <div class="recursive-host" data-engine="builds"></div>
+  </section>
+
+  <section id="panel-models" class="gordon-panel">
+    <div class="gordon-panel-header">Models</div>
+    <div class="recursive-host" data-engine="models"></div>
+  </section>
+
+  <section id="panel-mcp" class="gordon-panel">
+    <div class="gordon-panel-header">MCP Toolkit</div>
+    <div class="recursive-host" data-engine="mcp"></div>
+  </section>
+
+  <section id="panel-dockerhub" class="gordon-panel">
+    <div class="gordon-panel-header">Docker Hub</div>
+    <div class="recursive-host" data-engine="dockerhub"></div>
+  </section>
+
+</main>
+
+
+<script>
+/* =====================================================
+   RECURSIVE ENGINE
+   Each host receives its own independent instance.
+   ===================================================== */
+
+function createRecursiveResearchEngine(host){
+
+  const DEFAULT_TABS = [
+    "Context",
+    "Definition",
+    "History",
+    "How It Works",
+    "Examples",
+    "Sources",
+    "Level"
+  ];
+
+  const engine = document.createElement("div");
+
+  engine.className = "recursive-engine";
+
+  engine.innerHTML = `
+    <div class="toolbar">
+
+      <button class="engine-btn open-all">
+        Open All
+      </button>
+
+      <button class="engine-btn close-all">
+        Close All
+      </button>
+
+      <button class="engine-btn clear-all">
+        Clear All
+      </button>
+
+    </div>
+
+    <div class="root-input-area">
+
+      <textarea
+        class="root-input"
+        placeholder="Paste text for this Docker tab..."
+      ></textarea>
+
+      <button class="engine-btn add-paragraph">
+        Add Paragraph
+      </button>
+
+    </div>
+
+    <div class="workspace">
+
+      <div class="workspace-content">
+
+        <div class="empty-message">
+          Add text to begin recursive research.
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="selection-bar">
+
+      <div class="selection-label">
+        Selected:
+      </div>
+
+      <div class="selection-path">
+        Nothing selected
+      </div>
+
+    </div>
+  `;
+
+  host.appendChild(engine);
+
+
+  const workspaceContent =
+    engine.querySelector(".workspace-content");
+
+  const rootInput =
+    engine.querySelector(".root-input");
+
+  const selectionPath =
+    engine.querySelector(".selection-path");
+
+
+  let currentSelection = "";
+
+
+  function updateSelection(path){
+
+    currentSelection = path || "";
+
+    selectionPath.textContent =
+      currentSelection || "Nothing selected";
+
+  }
+
+
+  function escapeHTML(value){
+
+    const div =
+      document.createElement("div");
+
+    div.textContent =
+      String(value);
+
+    return div.innerHTML;
+
+  }
+
+
+  function tokenize(text){
+
+    return text.match(
+      /[A-Za-z0-9_+#.-]+|[^\sA-Za-z0-9_+#.-]/g
+    ) || [];
+
+  }
+
+
+  /* ===================================================
+     TAB EDITOR
+     =================================================== */
+
+  function createLocalTabEditor(box){
+
+    const editor =
+      document.createElement("div");
+
+    editor.className =
+      "local-tab-editor";
+
+    editor.innerHTML = `
+      <div class="local-tab-title">
+        Edit tabs
+      </div>
+
+      <div class="local-tab-list"></div>
+
+      <button class="add-local-tab">
+        + Add Tab
+      </button>
+    `;
+
+    const list =
+      editor.querySelector(".local-tab-list");
+
+
+    function renderEditor(){
+
+      list.innerHTML = "";
+
+      box._tabTitles.forEach(
+        (title,index)=>{
+
+          const row =
+            document.createElement("div");
+
+          row.className =
+            "local-tab-edit-row";
+
+          const input =
+            document.createElement("input");
+
+          input.value =
+            title;
+
+          input.dataset.index =
+            index;
+
+          row.appendChild(input);
+
+          input.addEventListener(
+            "input",
+            ()=>{
+
+              box._tabTitles[index] =
+                input.value || "Untitled";
+
+              updateLocalTab(
+                box,
+                index
+              );
+
+            }
+          );
+
+          list.appendChild(row);
+
+        }
+      );
+
+    }
+
+
+    editor
+      .querySelector(".add-local-tab")
+      .addEventListener(
+        "click",
+        ()=>{
+
+          const index =
+            box._tabTitles.length;
+
+          box._tabTitles.push(
+            "New Tab " + (index + 1)
+          );
+
+          const result =
+            createNormalTab(
+              box,
+              index
+            );
+
+          box
+            .querySelector(".tabs")
+            .appendChild(result.tab);
+
+          box
+            .querySelector(".tab-contents")
+            .appendChild(result.content);
+
+          renderEditor();
+
+        }
+      );
+
+
+    renderEditor();
+
+    return editor;
+
+  }
+
+
+  function updateLocalTab(box,index){
+
+    const tabs =
+      box.querySelectorAll(
+        ".tabs .tab:not(.face-tab)"
+      );
+
+    if(tabs[index]){
+
+      tabs[index].textContent =
+        box._tabTitles[index];
+
+    }
+
+  }
+
+
+  /* ===================================================
+     NORMAL TAB
+     =================================================== */
+
+  function createNormalTab(box,index){
+
+    const tab =
+      document.createElement("button");
+
+    tab.className =
+      "tab";
+
+    tab.textContent =
+      box._tabTitles[index];
+
+
+    const content =
+      document.createElement("div");
+
+    content.className =
+      "tab-content";
+
+
+    content.innerHTML = `
+      <div class="research-placeholder">
+        ${escapeHTML(box._tabTitles[index])}
+        information for
+        <strong>${escapeHTML(box._word)}</strong>.
+      </div>
+    `;
+
+
+    tab.addEventListener(
+      "click",
+      ()=>{
+
+        box
+          .querySelectorAll(".tabs .tab")
+          .forEach(x =>
+            x.classList.remove("active")
+          );
+
+        box
+          .querySelectorAll(".tab-content")
+          .forEach(x =>
+            x.classList.remove("active")
+          );
+
+        tab.classList.add("active");
+        content.classList.add("active");
+
+      }
+    );
+
+
+    return {
+      tab,
+      content
+    };
+
+  }
+
+
+  /* ===================================================
+     LEVEL
+     =================================================== */
+
+  function createLevelContent(box){
+
+    const content =
+      document.createElement("div");
+
+    content.className =
+      "level-content";
+
+    content.innerHTML = `
+      <div class="level-title">
+        Recursive Level
+      </div>
+
+      <div class="level-number">
+        ${box._depth}
+      </div>
+
+      <div class="level-path">
+        ${escapeHTML(box._path)}
+      </div>
+    `;
+
+    return content;
+
+  }
+
+
+  /* ===================================================
+     SIZE
+     =================================================== */
+
+  function createSizeControls(box){
+
+    const controls =
+      document.createElement("div");
+
+    controls.className =
+      "box-size-controls";
+
+    controls.innerHTML = `
+      <label>
+        W
+        <input
+          type="range"
+          min="260"
+          max="1200"
+          value="520"
+          class="width-slider"
+        >
+      </label>
+
+      <label>
+        H
+        <input
+          type="range"
+          min="120"
+          max="900"
+          value="300"
+          class="height-slider"
+        >
+      </label>
+
+      <label>
+        Text
+        <input
+          type="range"
+          min="10"
+          max="28"
+          value="14"
+          class="font-slider"
+        >
+      </label>
+
+      <label>
+        Auto
+        <input
+          type="checkbox"
+          class="auto-height"
+          checked
+        >
+      </label>
+
+      <button class="reset-size">
+        Reset
+      </button>
+    `;
+
+
+    const width =
+      controls.querySelector(".width-slider");
+
+    const height =
+      controls.querySelector(".height-slider");
+
+    const font =
+      controls.querySelector(".font-slider");
+
+    const auto =
+      controls.querySelector(".auto-height");
+
+
+    width.addEventListener(
+      "input",
+      ()=>{
+        box.style.width =
+          width.value + "px";
+      }
+    );
+
+
+    height.addEventListener(
+      "input",
+      ()=>{
+
+        if(!auto.checked){
+
+          box.style.height =
+            height.value + "px";
+
+        }
+
+      }
+    );
+
+
+    font.addEventListener(
+      "input",
+      ()=>{
+        box.style.fontSize =
+          font.value + "px";
+      }
+    );
+
+
+    auto.addEventListener(
+      "change",
+      ()=>{
+
+        box.style.height =
+          auto.checked
+            ? "auto"
+            : height.value + "px";
+
+      }
+    );
+
+
+    controls
+      .querySelector(".reset-size")
+      .addEventListener(
+        "click",
+        ()=>{
+
+          width.value=520;
+          height.value=300;
+          font.value=14;
+          auto.checked=true;
+
+          box.style.width="520px";
+          box.style.height="auto";
+          box.style.fontSize="14px";
+
+        }
+      );
+
+
+    return controls;
+
+  }
+
+
+  /* ===================================================
+     3D FACE
+     =================================================== */
+
+  function createFaceEditor(box){
+
+    const area =
+      document.createElement("div");
+
+    area.className =
+      "face-editor-area";
+
+    area.innerHTML = `
+      <div class="face-controls">
+
+        <label>
+          Mesh
+          <input
+            type="range"
+            min="3"
+            max="15"
+            value="8"
+            class="mesh-density"
+          >
+        </label>
+
+        <label>
+          X
+          <input
+            type="range"
+            min="-180"
+            max="180"
+            value="0"
+            class="rot-x"
+          >
+        </label>
+
+        <label>
+          Y
+          <input
+            type="range"
+            min="-180"
+            max="180"
+            value="0"
+            class="rot-y"
+          >
+        </label>
+
+        <label>
+          Z
+          <input
+            type="range"
+            min="-180"
+            max="180"
+            value="0"
+            class="rot-z"
+          >
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            class="show-mesh"
+            checked
+          >
+          Mesh
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            class="show-points"
+            checked
+          >
+          Points
+        </label>
+
+        <label>
+          <input
+            type="checkbox"
+            class="show-ids"
+          >
+          IDs
+        </label>
+
+        <button class="face-reset">
+          Reset
+        </button>
+
+      </div>
+
+      <canvas class="face-canvas"></canvas>
+    `;
+
+
+    const canvas =
+      area.querySelector(".face-canvas");
+
+    const ctx =
+      canvas.getContext("2d");
+
+
+    let rotationX=0;
+    let rotationY=0;
+    let rotationZ=0;
+    let meshDensity=8;
+
+    let dragging=false;
+    let lastX=0;
+    let lastY=0;
+
+
+    function resize(){
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const dpr =
+        window.devicePixelRatio || 1;
+
+      canvas.width =
+        Math.max(1,rect.width*dpr);
+
+      canvas.height =
+        Math.max(1,rect.height*dpr);
+
+      ctx.setTransform(
+        dpr,0,0,dpr,0,0
+      );
+
+      draw();
+
+    }
+
+
+    function project(x,y,z){
+
+      const cx=Math.cos(rotationX);
+      const sx=Math.sin(rotationX);
+      const cy=Math.cos(rotationY);
+      const sy=Math.sin(rotationY);
+      const cz=Math.cos(rotationZ);
+      const sz=Math.sin(rotationZ);
+
+      let yy=y*cx-z*sx;
+      let zz=y*sx+z*cx;
+
+      let xx=x*cy+zz*sy;
+
+      zz=-x*sy+zz*cy;
+
+      const xxx=
+        xx*cz-yy*sz;
+
+      const yyy=
+        xx*sz+yy*cz;
+
+      const rect=
+        canvas.getBoundingClientRect();
+
+      return {
+        x:rect.width/2+xxx,
+        y:rect.height/2+yyy
+      };
+
+    }
+
+
+    function draw(){
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      ctx.clearRect(
+        0,
+        0,
+        rect.width,
+        rect.height
+      );
+
+
+      if(
+        rect.width<=0 ||
+        rect.height<=0
+      ){
+        return;
+      }
+
+
+      const size =
+        Math.min(
+          rect.width,
+          rect.height
+        )*.32;
+
+
+      const points=[];
+
+
+      for(
+        let y=0;
+        y<meshDensity;
+        y++
+      ){
+
+        for(
+          let x=0;
+          x<meshDensity;
+          x++
+        ){
+
+          const nx=
+            x/(meshDensity-1)*2-1;
+
+          const ny=
+            y/(meshDensity-1)*2-1;
+
+          const curve=
+            Math.max(
+              0,
+              1-nx*nx-ny*ny
+            );
+
+          const z=
+            curve*size*.45;
+
+          points.push(
+            project(
+              nx*size,
+              ny*size,
+              z
+            )
+          );
+
+        }
+
+      }
+
+
+      if(
+        area.querySelector(
+          ".show-mesh"
+        ).checked
+      ){
+
+        ctx.beginPath();
+
+        for(
+          let y=0;
+          y<meshDensity;
+          y++
+        ){
+
+          for(
+            let x=0;
+            x<meshDensity;
+            x++
+          ){
+
+            const i=
+              y*meshDensity+x;
+
+            if(
+              x<meshDensity-1
+            ){
+
+              const a=points[i];
+              const b=points[i+1];
+
+              ctx.moveTo(a.x,a.y);
+              ctx.lineTo(b.x,b.y);
+
+            }
+
+            if(
+              y<meshDensity-1
+            ){
+
+              const a=points[i];
+              const b=points[i+meshDensity];
+
+              ctx.moveTo(a.x,a.y);
+              ctx.lineTo(b.x,b.y);
+
+            }
+
+          }
+
+        }
+
+        ctx.stroke();
+
+      }
+
+
+      if(
+        area.querySelector(
+          ".show-points"
+        ).checked
+      ){
+
+        points.forEach(
+          (p,i)=>{
+
+            ctx.beginPath();
+
+            ctx.arc(
+              p.x,
+              p.y,
+              3,
+              0,
+              Math.PI*2
+            );
+
+            ctx.fill();
+
+            if(
+              area.querySelector(
+                ".show-ids"
+              ).checked
+            ){
+
+              ctx.font=
+                "9px monospace";
+
+              ctx.fillText(
+                i,
+                p.x+5,
+                p.y-5
+              );
+
+            }
+
+          }
+        );
+
+      }
+
+    }
+
+
+    area.querySelector(
+      ".mesh-density"
+    ).addEventListener(
+      "input",
+      e=>{
+
+        meshDensity=
+          Number(e.target.value);
+
+        draw();
+
+      }
+    );
+
+
+    area.querySelector(
+      ".rot-x"
+    ).addEventListener(
+      "input",
+      e=>{
+
+        rotationX=
+          Number(e.target.value)*
+          Math.PI/180;
+
+        draw();
+
+      }
+    );
+
+
+    area.querySelector(
+      ".rot-y"
+    ).addEventListener(
+      "input",
+      e=>{
+
+        rotationY=
+          Number(e.target.value)*
+          Math.PI/180;
+
+        draw();
+
+      }
+    );
+
+
+    area.querySelector(
+      ".rot-z"
+    ).addEventListener(
+      "input",
+      e=>{
+
+        rotationZ=
+          Number(e.target.value)*
+          Math.PI/180;
+
+        draw();
+
+      }
+    );
+
+
+    area.querySelectorAll(
+      ".show-mesh,.show-points,.show-ids"
+    ).forEach(
+      input=>{
+        input.addEventListener(
+          "change",
+          draw
+        );
+      }
+    );
+
+
+    area.querySelector(
+      ".face-reset"
+    ).addEventListener(
+      "click",
+      ()=>{
+
+        rotationX=0;
+        rotationY=0;
+        rotationZ=0;
+        meshDensity=8;
+
+        area.querySelector(
+          ".rot-x"
+        ).value=0;
+
+        area.querySelector(
+          ".rot-y"
+        ).value=0;
+
+        area.querySelector(
+          ".rot-z"
+        ).value=0;
+
+        area.querySelector(
+          ".mesh-density"
+        ).value=8;
+
+        draw();
+
+      }
+    );
+
+
+    canvas.addEventListener(
+      "pointerdown",
+      e=>{
+
+        dragging=true;
+
+        lastX=e.clientX;
+        lastY=e.clientY;
+
+        canvas.setPointerCapture(
+          e.pointerId
+        );
+
+      }
+    );
+
+
+    canvas.addEventListener(
+      "pointermove",
+      e=>{
+
+        if(!dragging)return;
+
+        const dx=
+          e.clientX-lastX;
+
+        const dy=
+          e.clientY-lastY;
+
+        lastX=e.clientX;
+        lastY=e.clientY;
+
+
+        if(e.shiftKey){
+
+          rotationZ+=dx*.01;
+
+        }else{
+
+          rotationY+=dx*.01;
+          rotationX+=dy*.01;
+
+        }
+
+        draw();
+
+      }
+    );
+
+
+    canvas.addEventListener(
+      "pointerup",
+      e=>{
+
+        dragging=false;
+
+        try{
+          canvas.releasePointerCapture(
+            e.pointerId
+          );
+        }catch(_){}
+
+      }
+    );
+
+
+    const observer=
+      new ResizeObserver(
+        resize
+      );
+
+    observer.observe(canvas);
+
+    setTimeout(
+      resize,
+      30
+    );
+
+
+    return area;
+
+  }
+
+
+  function faceEditorAreaOpen(box){
+
+    if(box._faceCreated)return;
+
+    box._faceCreated=true;
+
+    const face=
+      createFaceEditor(box);
+
+    const faceContent=
+      box.querySelector(
+        ".face-tab-content"
+      );
+
+    if(faceContent){
+
+      faceContent.appendChild(face);
+
+    }
+
+  }
+
+
+  /* ===================================================
+     RESEARCH BOX
+     =================================================== */
+
+  function createResearchBox(
+    word,
+    depth,
+    path
+  ){
+
+    const box=
+      document.createElement("div");
+
+    box.className=
+      "research-box";
+
+    box._word=word;
+    box._depth=depth;
+    box._path=path;
+
+    box._tabTitles=
+      [...DEFAULT_TABS];
+
+
+    box.innerHTML=`
+      <div class="box-header">
+
+        <div class="box-title">
+          ${escapeHTML(word)}
+        </div>
+
+        <button class="close-box">
+          ×
+        </button>
+
+      </div>
+
+      <div class="box-path">
+        ${escapeHTML(path)}
+      </div>
+
+      <div class="box-size-mount"></div>
+
+      <div class="tabs"></div>
+
+      <div class="tab-contents"></div>
+
+      <div class="nested-area"></div>
+
+      <div class="letters-area"></div>
+    `;
+
+
+    const tabs=
+      box.querySelector(".tabs");
+
+    const contents=
+      box.querySelector(".tab-contents");
+
+
+    box._tabTitles.forEach(
+      (title,index)=>{
+
+        const result=
+          createNormalTab(
+            box,
+            index
+          );
+
+        tabs.appendChild(
+          result.tab
+        );
+
+        contents.appendChild(
+          result.content
+        );
+
+      }
+    );
+
+
+    const firstTab=
+      tabs.querySelector(".tab");
+
+    const firstContent=
+      contents.querySelector(".tab-content");
+
+
+    if(firstTab)
+      firstTab.classList.add("active");
+
+    if(firstContent)
+      firstContent.classList.add("active");
+
+
+    /* LEVEL */
+
+    const levelIndex=
+      box._tabTitles.length-1;
+
+    const levelTarget=
+      contents.children[levelIndex];
+
+    if(levelTarget){
+
+      levelTarget.innerHTML="";
+
+      levelTarget.appendChild(
+        createLevelContent(box)
+      );
+
+    }
+
+
+    /* TAB EDITOR */
+
+    box
+      .querySelector(".box-size-mount")
+      .appendChild(
+        createLocalTabEditor(box)
+      );
+
+
+    /* SIZE */
+
+    box
+      .querySelector(".box-size-mount")
+      .appendChild(
+        createSizeControls(box)
+      );
+
+
+    /* CLOSE */
+
+    box
+      .querySelector(".close-box")
+      .addEventListener(
+        "click",
+        ()=>{
+          box.remove();
+        }
+      );
+
+
+    /* 3D FACE TAB */
+
+    const faceTab=
+      document.createElement("button");
+
+    faceTab.className=
+      "tab face-tab";
+
+    faceTab.textContent=
+      "3D Face";
+
+    tabs.appendChild(
+      faceTab
+    );
+
+
+    faceTab.addEventListener(
+      "click",
+      ()=>{
+
+        tabs
+          .querySelectorAll(".tab")
+          .forEach(
+            x=>x.classList.remove("active")
+          );
+
+        contents
+          .querySelectorAll(".tab-content")
+          .forEach(
+            x=>x.classList.remove("active")
+          );
+
+
+        let faceContent=
+          contents.querySelector(
+            ".face-tab-content"
+          );
+
+
+        if(!faceContent){
+
+          faceContent=
+            document.createElement("div");
+
+          faceContent.className=
+            "tab-content face-tab-content";
+
+          contents.appendChild(
+            faceContent
+          );
+
+        }
+
+
+        faceTab.classList.add(
+          "active"
+        );
+
+        faceContent.classList.add(
+          "active"
+        );
+
+        faceEditorAreaOpen(
+          box
+        );
+
+      }
+    );
+
+
+    /* NESTED */
+
+    const nestedInput=
+      document.createElement("textarea");
+
+    nestedInput.className=
+      "nested-input";
+
+    nestedInput.placeholder=
+      "Add recursive text inside "+
+      word+"...";
+
+
+    const nestedButton=
+      document.createElement("button");
+
+    nestedButton.className=
+      "engine-btn";
+
+    nestedButton.textContent=
+      "Add Nested Paragraph";
+
+
+    box
+      .querySelector(".nested-area")
+      .appendChild(
+        nestedInput
+      );
+
+    box
+      .querySelector(".nested-area")
+      .appendChild(
+        nestedButton
+      );
+
+
+    nestedButton.addEventListener(
+      "click",
+      ()=>{
+
+        const text=
+          nestedInput.value.trim();
+
+        if(!text)return;
+
+        createNestedParagraph(
+          box.querySelector(
+            ".nested-area"
+          ),
+          text,
+          depth+1,
+          path+" → "+word
+        );
+
+        nestedInput.value="";
+
+      }
+    );
+
+
+    /* LETTERS */
+
+    const letters=
+      box.querySelector(
+        ".letters-area"
+      );
+
+
+    const title=
+      document.createElement("div");
+
+    title.className=
+      "letters-title";
+
+    title.textContent=
+      "Letters";
+
+    letters.appendChild(
+      title
+    );
+
+
+    [...word].forEach(
+      character=>{
+
+        letters.appendChild(
+          createLetter(
+            character,
+            depth+1,
+            path+" → "+word
+          )
+        );
+
+      }
+    );
+
+
+    box
+      .querySelector(".box-title")
+      .addEventListener(
+        "click",
+        ()=>{
+          updateSelection(path);
+        }
+      );
+
+
+    return box;
+
+  }
+
+
+  /* ===================================================
+     LETTER
+     =================================================== */
+
+  function createLetter(
+    character,
+    depth,
+    path
+  ){
+
+    const wrapper=
+      document.createElement("span");
+
+    wrapper.className=
+      "letter-wrapper";
+
+
+    const letter=
+      document.createElement("button");
+
+    letter.className=
+      "letter";
+
+    letter.textContent=
+      character;
+
+
+    wrapper.appendChild(
+      letter
+    );
+
+
+    letter.addEventListener(
+      "click",
+      ()=>{
+
+        const newPath=
+          path+" → "+character;
+
+        updateSelection(
+          newPath
+        );
+
+
+        const existing=
+          wrapper.querySelector(
+            ":scope > .research-box"
+          );
+
+
+        if(existing){
+
+          existing.remove();
+
+          return;
+
+        }
+
+
+        wrapper.appendChild(
+          createResearchBox(
+            character,
+            depth,
+            newPath
+          )
+        );
+
+      }
+    );
+
+
+    return wrapper;
+
+  }
+
+
+  /* ===================================================
+     WORD
+     =================================================== */
+
+  function createWord(
+    text,
+    depth,
+    path
+  ){
+
+    const wrapper=
+      document.createElement("span");
+
+    wrapper.className=
+      "word-container";
+
+
+    const word=
+      document.createElement("button");
+
+    word.className=
+      "word";
+
+    word.textContent=
+      text;
+
+
+    wrapper.appendChild(
+      word
+    );
+
+
+    word.addEventListener(
+      "click",
+      ()=>{
+
+        const newPath=
+          path+" → "+text;
+
+        updateSelection(
+          newPath
+        );
+
+
+        const existing=
+          wrapper.querySelector(
+            ":scope > .research-box"
+          );
+
+
+        if(existing){
+
+          existing.remove();
+
+          return;
+
+        }
+
+
+        wrapper.appendChild(
+          createResearchBox(
+            text,
+            depth,
+            newPath
+          )
+        );
+
+      }
+    );
+
+
+    return wrapper;
+
+  }
+
+
+  /* ===================================================
+     NESTED PARAGRAPH
+     =================================================== */
+
+  function createNestedParagraph(
+    parent,
+    text,
+    depth,
+    path
+  ){
+
+    const row=
+      document.createElement("div");
+
+    row.className=
+      "nested-paragraph";
+
+
+    tokenize(text).forEach(
+      token=>{
+
+        if(/^\s+$/.test(token)){
+
+          row.appendChild(
+            document.createTextNode(token)
+          );
+
+        }else if(
+          /^[A-Za-z0-9_+#.-]+$/.test(token)
+        ){
+
+          row.appendChild(
+            createWord(
+              token,
+              depth,
+              path
+            )
+          );
+
+        }else{
+
+          row.appendChild(
+            document.createTextNode(token)
+          );
+
+        }
+
+      }
+    );
+
+
+    const letters=
+      document.createElement("div");
+
+    letters.className=
+      "letters-area";
+
+
+    [...text].forEach(
+      character=>{
+
+        if(character.trim()){
+
+          letters.appendChild(
+            createLetter(
+              character,
+              depth+1,
+              path
+            )
+          );
+
+        }
+
+      }
+    );
+
+
+    row.appendChild(
+      letters
+    );
+
+    parent.appendChild(
+      row
+    );
+
+
+    return row;
+
+  }
+
+
+  /* ===================================================
+     ROOT PARAGRAPH
+     =================================================== */
+
+  function addRootParagraph(){
+
+    const text=
+      rootInput.value.trim();
+
+    if(!text)return;
+
+
+    const empty=
+      workspaceContent.querySelector(
+        ".empty-message"
+      );
+
+    if(empty)
+      empty.remove();
+
+
+    const row=
+      document.createElement("div");
+
+    row.className=
+      "paragraph-row";
+
+
+    const paragraph=
+      document.createElement("div");
+
+    paragraph.className=
+      "paragraph";
+
+
+    tokenize(text).forEach(
+      token=>{
+
+        if(/^\s+$/.test(token)){
+
+          paragraph.appendChild(
+            document.createTextNode(token)
+          );
+
+        }else if(
+          /^[A-Za-z0-9_+#.-]+$/.test(token)
+        ){
+
+          paragraph.appendChild(
+            createWord(
+              token,
+              1,
+              "Page"
+            )
+          );
+
+        }else{
+
+          paragraph.appendChild(
+            document.createTextNode(token)
+          );
+
+        }
+
+      }
+    );
+
+
+    row.appendChild(
+      paragraph
+    );
+
+    workspaceContent.appendChild(
+      row
+    );
+
+
+    rootInput.value="";
+
+    updateSelection(
+      "Page → "+text
+    );
+
+  }
+
+
+  /* ===================================================
+     OPEN / CLOSE / CLEAR
+     =================================================== */
+
+  function openAll(){
+
+    workspaceContent
+      .querySelectorAll(".word")
+      .forEach(
+        word=>{
+
+          const wrapper=
+            word.parentElement;
+
+          if(
+            !wrapper.querySelector(
+              ":scope > .research-box"
+            )
+          ){
+
+            wrapper.appendChild(
+              createResearchBox(
+                word.textContent,
+                1,
+                "Page → "+
+                word.textContent
+              )
+            );
+
+          }
+
+        }
+      );
+
+  }
+
+
+  function closeAll(){
+
+    workspaceContent
+      .querySelectorAll(".research-box")
+      .forEach(
+        box=>box.remove()
+      );
+
+  }
+
+
+  function clearAll(){
+
+    workspaceContent.innerHTML=`
+      <div class="empty-message">
+        Add text to begin recursive research.
+      </div>
+    `;
+
+    rootInput.value="";
+
+    updateSelection("");
+
+  }
+
+
+  /* ===================================================
+     LOCAL BUTTONS
+     =================================================== */
+
+  engine
+    .querySelector(".add-paragraph")
+    .addEventListener(
+      "click",
+      addRootParagraph
+    );
+
+
+  engine
+    .querySelector(".open-all")
+    .addEventListener(
+      "click",
+      openAll
+    );
+
+
+  engine
+    .querySelector(".close-all")
+    .addEventListener(
+      "click",
+      closeAll
+    );
+
+
+  engine
+    .querySelector(".clear-all")
+    .addEventListener(
+      "click",
+      clearAll
+    );
+
+
+  rootInput.addEventListener(
+    "keydown",
+    e=>{
+
+      if(
+        e.key==="Enter" &&
+        (e.ctrlKey || e.metaKey)
+      ){
+
+        e.preventDefault();
+
+        addRootParagraph();
+
+      }
+
+    }
+  );
+
+
+  return {
+    engine,
+    addRootParagraph,
+    openAll,
+    closeAll,
+    clearAll
+  };
+
+}
+
+
+/* =====================================================
+   CREATE ONE INDEPENDENT ENGINE FOR EVERY DOCKER TAB
+   ===================================================== */
+
+const recursiveEngines={};
+
+
+document
+  .querySelectorAll(".recursive-host")
+  .forEach(
+    host=>{
+
+      const name=
+        host.dataset.engine;
+
+      recursiveEngines[name]=
+        createRecursiveResearchEngine(
+          host
+        );
+
+    }
+  );
+
+
+/* =====================================================
+   SIDEBAR SWITCHING
+   ===================================================== */
+
+const sidebarButtons=
+  document.querySelectorAll(
+    ".gordon-side-tab"
+  );
+
+const panels=
+  document.querySelectorAll(
+    ".gordon-panel"
+  );
+
+
+sidebarButtons.forEach(
+  button=>{
+
+    button.addEventListener(
+      "click",
+      ()=>{
+
+        const id=
+          button.dataset.panel;
+
+
+        sidebarButtons.forEach(
+          item=>{
+            item.classList.toggle(
+              "active",
+              item===button
+            );
+          }
+        );
+
+
+        panels.forEach(
+          panel=>{
+            panel.classList.toggle(
+              "active",
+              panel.id==="panel-"+id
+            );
+          }
+        );
+
+
+        window.scrollTo(
+          0,
+          0
+        );
+
+      }
+    );
+
+  }
+);
+
+</script>
+
+</body>
+</html>

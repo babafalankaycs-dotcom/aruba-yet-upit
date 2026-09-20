@@ -1,0 +1,2358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Morphing 3D Face + Polygon Neck</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #050810;
+    font-family: Arial, sans-serif;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+}
+
+canvas.dragging {
+    cursor: grabbing;
+}
+
+#panel {
+    position: fixed;
+    z-index: 20;
+    top: 15px;
+    left: 15px;
+    width: 300px;
+    padding: 18px;
+    border-radius: 15px;
+    color: white;
+    background: rgba(10,15,26,.95);
+    border: 1px solid #303b50;
+    box-shadow: 0 15px 50px rgba(0,0,0,.55);
+}
+
+h2 {
+    margin: 0 0 5px;
+    font-size: 20px;
+}
+
+.subtitle {
+    color: #8792a6;
+    font-size: 12px;
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-top: 12px;
+    font-size: 13px;
+    color: #aab3c2;
+}
+
+input[type="range"] {
+    width: 100%;
+    margin-top: 5px;
+}
+
+.value {
+    float: right;
+    color: #55b8ff;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 9px;
+    border: 0;
+    border-radius: 7px;
+    color: white;
+    background: #1769aa;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #2388ce;
+}
+
+.info {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #293244;
+    color: #8f9aac;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+#status {
+    position: fixed;
+    z-index: 10;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 13px;
+    border-radius: 20px;
+    color: #b8c1cf;
+    background: rgba(5,8,16,.8);
+    font-size: 12px;
+    pointer-events: none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="panel">
+
+    <h2>Morphing 3D Face</h2>
+
+    <div class="subtitle">
+        Editable head mesh balanced on a polygonal neck.
+    </div>
+
+    <label>
+        X Rotation
+        <span class="value" id="rxValue">0°</span>
+    </label>
+
+    <input
+        id="rx"
+        type="range"
+        min="-90"
+        max="90"
+        value="0"
+    >
+
+    <label>
+        Y Rotation
+        <span class="value" id="ryValue">0°</span>
+    </label>
+
+    <input
+        id="ry"
+        type="range"
+        min="-90"
+        max="90"
+        value="0"
+    >
+
+    <label>
+        Z Rotation
+        <span class="value" id="rzValue">0°</span>
+    </label>
+
+    <input
+        id="rz"
+        type="range"
+        min="-180"
+        max="180"
+        value="0"
+    >
+
+    <label>
+        Mesh Density
+        <span class="value" id="densityValue">15 × 15</span>
+    </label>
+
+    <input
+        id="density"
+        type="range"
+        min="5"
+        max="25"
+        value="15"
+    >
+
+    <button id="wire">
+        Hide Mesh Lines
+    </button>
+
+    <button id="points">
+        Hide Points
+    </button>
+
+    <button id="ids">
+        Hide Vertex IDs
+    </button>
+
+    <button id="neck">
+        Hide Neck
+    </button>
+
+    <button id="reset">
+        Reset Face
+    </button>
+
+    <div class="info">
+
+        <b>Drag</b> a point = move it across the face<br>
+
+        <b>Shift + Drag</b> = pull point forward/backward<br>
+
+        <b>Alt + Drag</b> = rotate the view<br><br>
+
+        The head is balanced on a polygonal neck.
+
+    </div>
+
+</div>
+
+<div id="status">
+    Click and drag any point on the face
+</div>
+
+<canvas id="canvas"></canvas>
+
+
+<script>
+
+/* =========================================================
+   CANVAS
+========================================================= */
+
+const canvas =
+    document.getElementById("canvas");
+
+const ctx =
+    canvas.getContext("2d");
+
+let W = 0;
+let H = 0;
+
+function resize() {
+
+    W =
+        canvas.width =
+        window.innerWidth;
+
+    H =
+        canvas.height =
+        window.innerHeight;
+}
+
+window.addEventListener(
+    "resize",
+    resize
+);
+
+resize();
+
+
+/* =========================================================
+   CONTROLS
+========================================================= */
+
+const rxSlider =
+    document.getElementById("rx");
+
+const rySlider =
+    document.getElementById("ry");
+
+const rzSlider =
+    document.getElementById("rz");
+
+const densitySlider =
+    document.getElementById("density");
+
+const rxValue =
+    document.getElementById("rxValue");
+
+const ryValue =
+    document.getElementById("ryValue");
+
+const rzValue =
+    document.getElementById("rzValue");
+
+const densityValue =
+    document.getElementById("densityValue");
+
+
+let showWire = true;
+let showPoints = true;
+let showIDs = true;
+let showNeck = true;
+
+
+/* =========================================================
+   MESH
+========================================================= */
+
+let N = 15;
+
+let vertices = [];
+let originalVertices = [];
+
+
+/*
+    HEAD DIMENSIONS
+
+    The face is centered around Y = 0.
+
+    Bottom of the head is approximately
+    Y = -3.
+
+    The neck will begin there.
+*/
+
+const HEAD_WIDTH = 5;
+const HEAD_HEIGHT = 3;
+
+
+/* =========================================================
+   BUILD HEAD
+========================================================= */
+
+function buildMesh() {
+
+    N =
+        Number(
+            densitySlider.value
+        );
+
+    vertices = [];
+    originalVertices = [];
+
+    for (
+        let j = 0;
+        j < N;
+        j++
+    ) {
+
+        for (
+            let i = 0;
+            i < N;
+            i++
+        ) {
+
+            const u =
+                i / (N - 1) * 2 - 1;
+
+            const v =
+                j / (N - 1) * 2 - 1;
+
+
+            const distance =
+                Math.sqrt(
+                    u * u +
+                    v * v
+                );
+
+
+            let uu = u;
+            let vv = v;
+
+
+            /*
+                Keep the outside of the
+                square inside the oval.
+            */
+
+            if (distance > 1) {
+
+                uu /= distance;
+                vv /= distance;
+            }
+
+
+            const x =
+                uu * HEAD_WIDTH;
+
+            const y =
+                vv * HEAD_HEIGHT;
+
+
+            const point = {
+
+                id:
+                    vertices.length + 1,
+
+                x: x,
+                y: y,
+                z: 0
+            };
+
+
+            vertices.push(point);
+
+
+            originalVertices.push({
+
+                id:
+                    point.id,
+
+                x: x,
+                y: y,
+                z: 0
+            });
+        }
+    }
+
+
+    densityValue.textContent =
+        N + " × " + N;
+}
+
+
+/* =========================================================
+   POLYGONAL NECK
+========================================================= */
+
+/*
+    The neck is deliberately separate from
+    the editable face mesh.
+
+    It is a low-poly 3D form.
+
+    Front:
+        z = 0.45
+
+    Back:
+        z = -0.45
+*/
+
+
+const neckFront = [
+
+    {
+        x: -1.55,
+        y: -2.55,
+        z: 0.45
+    },
+
+    {
+        x: 1.55,
+        y: -2.55,
+        z: 0.45
+    },
+
+    {
+        x: 1.30,
+        y: -6.20,
+        z: 0.45
+    },
+
+    {
+        x: -1.30,
+        y: -6.20,
+        z: 0.45
+    }
+
+];
+
+
+const neckBack = [
+
+    {
+        x: -1.55,
+        y: -2.55,
+        z: -0.45
+    },
+
+    {
+        x: 1.55,
+        y: -2.55,
+        z: -0.45
+    },
+
+    {
+        x: 1.30,
+        y: -6.20,
+        z: -0.45
+    },
+
+    {
+        x: -1.30,
+        y: -6.20,
+        z: -0.45
+    }
+
+];
+
+
+/* =========================================================
+   ROTATION
+========================================================= */
+
+function rotatePoint(p) {
+
+    let x = p.x;
+    let y = p.y;
+    let z = p.z;
+
+
+    const rx =
+        Number(rxSlider.value) *
+        Math.PI / 180;
+
+    const ry =
+        Number(rySlider.value) *
+        Math.PI / 180;
+
+    const rz =
+        Number(rzSlider.value) *
+        Math.PI / 180;
+
+
+    /* X ROTATION */
+
+    let c =
+        Math.cos(rx);
+
+    let s =
+        Math.sin(rx);
+
+
+    let yy =
+        y * c -
+        z * s;
+
+
+    let zz =
+        y * s +
+        z * c;
+
+
+    y = yy;
+    z = zz;
+
+
+    /* Y ROTATION */
+
+    c =
+        Math.cos(ry);
+
+    s =
+        Math.sin(ry);
+
+
+    let xx =
+        x * c +
+        z * s;
+
+
+    zz =
+        -x * s +
+        z * c;
+
+
+    x = xx;
+    z = zz;
+
+
+    /* Z ROTATION */
+
+    c =
+        Math.cos(rz);
+
+    s =
+        Math.sin(rz);
+
+
+    xx =
+        x * c -
+        y * s;
+
+
+    yy =
+        x * s +
+        y * c;
+
+
+    x = xx;
+    y = yy;
+
+
+    return {
+
+        x: x,
+        y: y,
+        z: z
+    };
+}
+
+
+/* =========================================================
+   PROJECTION
+========================================================= */
+
+function project(p) {
+
+    const cameraDistance = 22;
+
+
+    const scale =
+        cameraDistance /
+        (
+            cameraDistance +
+            p.z
+        );
+
+
+    return {
+
+        x:
+            W / 2 +
+            p.x *
+            scale *
+            70,
+
+        y:
+            H / 2 -
+            p.y *
+            scale *
+            70,
+
+        z:
+            p.z
+    };
+}
+
+
+/* =========================================================
+   SCREEN HEAD VERTICES
+========================================================= */
+
+function getScreenVertices() {
+
+    const result = [];
+
+
+    for (
+        let i = 0;
+        i < vertices.length;
+        i++
+    ) {
+
+        const rotated =
+            rotatePoint(
+                vertices[i]
+            );
+
+
+        const projected =
+            project(
+                rotated
+            );
+
+
+        projected.id =
+            vertices[i].id;
+
+
+        result.push(
+            projected
+        );
+    }
+
+
+    return result;
+}
+
+
+/* =========================================================
+   SCREEN NECK
+========================================================= */
+
+function getScreenNeck() {
+
+    const front = [];
+    const back = [];
+
+
+    for (
+        const p of neckFront
+    ) {
+
+        front.push(
+            project(
+                rotatePoint(p)
+            )
+        );
+    }
+
+
+    for (
+        const p of neckBack
+    ) {
+
+        back.push(
+            project(
+                rotatePoint(p)
+            )
+        );
+    }
+
+
+    return {
+
+        front: front,
+        back: back
+    };
+}
+
+
+/* =========================================================
+   BACKGROUND
+========================================================= */
+
+function drawBackground() {
+
+    ctx.fillStyle =
+        "#050810";
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+
+    ctx.strokeStyle =
+        "#101722";
+
+    ctx.lineWidth = 1;
+
+
+    for (
+        let x = 0;
+        x < W;
+        x += 50
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            x,
+            0
+        );
+
+        ctx.lineTo(
+            x,
+            H
+        );
+
+        ctx.stroke();
+    }
+
+
+    for (
+        let y = 0;
+        y < H;
+        y += 50
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            0,
+            y
+        );
+
+        ctx.lineTo(
+            W,
+            y
+        );
+
+        ctx.stroke();
+    }
+}
+
+
+/* =========================================================
+   DRAW POLYGON HELPER
+========================================================= */
+
+function polygon(points, fill, stroke) {
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+        points[0].x,
+        points[0].y
+    );
+
+
+    for (
+        let i = 1;
+        i < points.length;
+        i++
+    ) {
+
+        ctx.lineTo(
+            points[i].x,
+            points[i].y
+        );
+    }
+
+
+    ctx.closePath();
+
+
+    ctx.fillStyle =
+        fill;
+
+    ctx.fill();
+
+
+    if (stroke) {
+
+        ctx.strokeStyle =
+            stroke;
+
+        ctx.lineWidth = 1;
+
+        ctx.stroke();
+    }
+}
+
+
+/* =========================================================
+   DRAW NECK
+========================================================= */
+
+function drawNeck() {
+
+    if (!showNeck)
+        return;
+
+
+    const neck =
+        getScreenNeck();
+
+
+    const f =
+        neck.front;
+
+    const b =
+        neck.back;
+
+
+    /*
+        Back face.
+    */
+
+    polygon(
+        [
+            b[0],
+            b[1],
+            b[2],
+            b[3]
+        ],
+        "rgba(18,55,78,.95)",
+        "rgba(85,180,220,.55)"
+    );
+
+
+    /*
+        Left side.
+    */
+
+    polygon(
+        [
+            f[0],
+            b[0],
+            b[3],
+            f[3]
+        ],
+        "rgba(17,70,96,.95)",
+        "rgba(85,180,220,.55)"
+    );
+
+
+    /*
+        Right side.
+    */
+
+    polygon(
+        [
+            f[1],
+            b[1],
+            b[2],
+            f[2]
+        ],
+        "rgba(12,53,76,.95)",
+        "rgba(85,180,220,.55)"
+    );
+
+
+    /*
+        Bottom.
+    */
+
+    polygon(
+        [
+            f[3],
+            b[3],
+            b[2],
+            f[2]
+        ],
+        "rgba(10,42,62,.95)",
+        "rgba(85,180,220,.55)"
+    );
+
+
+    /*
+        Main front of neck.
+    */
+
+    polygon(
+        [
+            f[0],
+            f[1],
+            f[2],
+            f[3]
+        ],
+        "rgba(30,105,137,.95)",
+        "rgba(100,205,245,.8)"
+    );
+
+
+    /*
+        Add a center polygon so it
+        reads as a low-poly object.
+    */
+
+    const centerTop = {
+
+        x:
+            (f[0].x + f[1].x) / 2,
+
+        y:
+            (f[0].y + f[1].y) / 2,
+
+        z:
+            (f[0].z + f[1].z) / 2
+    };
+
+
+    const centerBottom = {
+
+        x:
+            (f[2].x + f[3].x) / 2,
+
+        y:
+            (f[2].y + f[3].y) / 2,
+
+        z:
+            (f[2].z + f[3].z) / 2
+    };
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        f[0].x,
+        f[0].y
+    );
+
+    ctx.lineTo(
+        centerTop.x,
+        centerTop.y
+    );
+
+    ctx.lineTo(
+        centerBottom.x,
+        centerBottom.y
+    );
+
+    ctx.lineTo(
+        f[3].x,
+        f[3].y
+    );
+
+    ctx.closePath();
+
+    ctx.fillStyle =
+        "rgba(42,125,158,.55)";
+
+    ctx.fill();
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        centerTop.x,
+        centerTop.y
+    );
+
+    ctx.lineTo(
+        f[1].x,
+        f[1].y
+    );
+
+    ctx.lineTo(
+        f[2].x,
+        f[2].y
+    );
+
+    ctx.lineTo(
+        centerBottom.x,
+        centerBottom.y
+    );
+
+    ctx.closePath();
+
+    ctx.fillStyle =
+        "rgba(24,88,119,.55)";
+
+    ctx.fill();
+
+
+    /*
+        Neck outline.
+    */
+
+    ctx.strokeStyle =
+        "rgba(100,205,245,.9)";
+
+    ctx.lineWidth = 1.5;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        f[0].x,
+        f[0].y
+    );
+
+    ctx.lineTo(
+        f[1].x,
+        f[1].y
+    );
+
+    ctx.lineTo(
+        f[2].x,
+        f[2].y
+    );
+
+    ctx.lineTo(
+        f[3].x,
+        f[3].y
+    );
+
+    ctx.closePath();
+
+    ctx.stroke();
+}
+
+
+/* =========================================================
+   DRAW FACE
+========================================================= */
+
+function drawFace(screenVertices) {
+
+    for (
+        let j = 0;
+        j < N - 1;
+        j++
+    ) {
+
+        for (
+            let i = 0;
+            i < N - 1;
+            i++
+        ) {
+
+            const a =
+                screenVertices[
+                    j * N + i
+                ];
+
+            const b =
+                screenVertices[
+                    j * N + i + 1
+                ];
+
+            const c =
+                screenVertices[
+                    (j + 1) * N +
+                    i + 1
+                ];
+
+            const d =
+                screenVertices[
+                    (j + 1) * N + i
+                ];
+
+
+            const depth =
+                (
+                    a.z +
+                    b.z +
+                    c.z +
+                    d.z
+                ) / 4;
+
+
+            const brightness =
+                Math.max(
+                    0.08,
+                    Math.min(
+                        0.35,
+                        0.20 -
+                        depth * 0.008
+                    )
+                );
+
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                a.x,
+                a.y
+            );
+
+            ctx.lineTo(
+                b.x,
+                b.y
+            );
+
+            ctx.lineTo(
+                c.x,
+                c.y
+            );
+
+            ctx.lineTo(
+                d.x,
+                d.y
+            );
+
+            ctx.closePath();
+
+
+            ctx.fillStyle =
+                `rgba(35,150,220,${brightness})`;
+
+            ctx.fill();
+        }
+    }
+}
+
+
+/* =========================================================
+   DRAW MESH
+========================================================= */
+
+function drawMesh(screenVertices) {
+
+    if (!showWire)
+        return;
+
+
+    /*
+        Horizontal.
+    */
+
+    for (
+        let j = 0;
+        j < N;
+        j++
+    ) {
+
+        for (
+            let i = 0;
+            i < N - 1;
+            i++
+        ) {
+
+            const a =
+                screenVertices[
+                    j * N + i
+                ];
+
+            const b =
+                screenVertices[
+                    j * N + i + 1
+                ];
+
+
+            drawEdge(
+                a,
+                b
+            );
+        }
+    }
+
+
+    /*
+        Vertical.
+    */
+
+    for (
+        let j = 0;
+        j < N - 1;
+        j++
+    ) {
+
+        for (
+            let i = 0;
+            i < N;
+            i++
+        ) {
+
+            const a =
+                screenVertices[
+                    j * N + i
+                ];
+
+            const b =
+                screenVertices[
+                    (j + 1) * N + i
+                ];
+
+
+            drawEdge(
+                a,
+                b
+            );
+        }
+    }
+}
+
+
+/* =========================================================
+   EDGE
+========================================================= */
+
+function drawEdge(a,b) {
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        a.x,
+        a.y
+    );
+
+    ctx.lineTo(
+        b.x,
+        b.y
+    );
+
+
+    ctx.strokeStyle =
+        "rgba(85,195,255,.75)";
+
+    ctx.lineWidth = 1;
+
+    ctx.stroke();
+}
+
+
+/* =========================================================
+   DRAW POINTS
+========================================================= */
+
+function drawPoints(screenVertices) {
+
+    if (!showPoints)
+        return;
+
+
+    const order =
+        screenVertices
+        .map(
+            (p,index) => ({
+                p: p,
+                index: index
+            })
+        )
+        .sort(
+            (a,b) =>
+                a.p.z -
+                b.p.z
+        );
+
+
+    for (
+        const item of order
+    ) {
+
+        const p =
+            item.p;
+
+
+        const isSelected =
+            item.index ===
+            selectedVertex;
+
+
+        ctx.beginPath();
+
+        ctx.arc(
+            p.x,
+            p.y,
+            isSelected
+                ? 6
+                : 4.5,
+            0,
+            Math.PI * 2
+        );
+
+
+        ctx.fillStyle =
+            isSelected
+            ? "#ffffff"
+            : "#38aaff";
+
+
+        ctx.fill();
+
+
+        ctx.strokeStyle =
+            isSelected
+            ? "#55d8ff"
+            : "#ffffff";
+
+
+        ctx.lineWidth =
+            isSelected
+            ? 2
+            : 1;
+
+
+        ctx.stroke();
+    }
+}
+
+
+/* =========================================================
+   DRAW IDS
+========================================================= */
+
+function drawVertexIDs(screenVertices) {
+
+    if (!showIDs)
+        return;
+
+
+    const order =
+        screenVertices
+        .map(
+            (p,index) => ({
+                p: p,
+                index: index
+            })
+        )
+        .sort(
+            (a,b) =>
+                a.p.z -
+                b.p.z
+        );
+
+
+    for (
+        const item of order
+    ) {
+
+        const p =
+            item.p;
+
+
+        const isSelected =
+            item.index ===
+            selectedVertex;
+
+
+        const text =
+            "V" + p.id;
+
+
+        ctx.font =
+            isSelected
+            ? "bold 11px Arial"
+            : "9px Arial";
+
+
+        ctx.textAlign =
+            "left";
+
+        ctx.textBaseline =
+            "middle";
+
+
+        const offsetX = 8;
+        const offsetY = -8;
+
+
+        const width =
+            ctx.measureText(
+                text
+            ).width;
+
+
+        ctx.fillStyle =
+            "rgba(5,8,16,.75)";
+
+
+        ctx.fillRect(
+            p.x +
+            offsetX -
+            2,
+
+            p.y +
+            offsetY -
+            6,
+
+            width + 4,
+            12
+        );
+
+
+        ctx.fillStyle =
+            isSelected
+            ? "#ffffff"
+            : "#8fdcff";
+
+
+        ctx.fillText(
+            text,
+
+            p.x +
+            offsetX,
+
+            p.y +
+            offsetY
+        );
+    }
+}
+
+
+/* =========================================================
+   DRAW
+========================================================= */
+
+function draw() {
+
+    drawBackground();
+
+
+    rxValue.textContent =
+        rxSlider.value + "°";
+
+    ryValue.textContent =
+        rySlider.value + "°";
+
+    rzValue.textContent =
+        rzSlider.value + "°";
+
+
+    /*
+        Neck first.
+
+        This puts the neck behind
+        the head.
+    */
+
+    drawNeck();
+
+
+    const screenVertices =
+        getScreenVertices();
+
+
+    /*
+        Head surface.
+    */
+
+    drawFace(
+        screenVertices
+    );
+
+
+    /*
+        Head mesh.
+    */
+
+    drawMesh(
+        screenVertices
+    );
+
+
+    /*
+        Points.
+    */
+
+    drawPoints(
+        screenVertices
+    );
+
+
+    /*
+        IDs last.
+    */
+
+    drawVertexIDs(
+        screenVertices
+    );
+}
+
+
+/* =========================================================
+   FIND CLOSEST VERTEX
+========================================================= */
+
+function findVertex(mx,my) {
+
+    const screenVertices =
+        getScreenVertices();
+
+
+    let closest = -1;
+
+    let distance = 16;
+
+
+    for (
+        let i = 0;
+        i < screenVertices.length;
+        i++
+    ) {
+
+        const p =
+            screenVertices[i];
+
+
+        const d =
+            Math.hypot(
+                mx - p.x,
+                my - p.y
+            );
+
+
+        if (
+            d < distance
+        ) {
+
+            distance = d;
+            closest = i;
+        }
+    }
+
+
+    return closest;
+}
+
+
+/* =========================================================
+   DRAGGING
+========================================================= */
+
+let selectedVertex = -1;
+
+let dragging = false;
+
+let startMouseX = 0;
+let startMouseY = 0;
+
+let startVertex = null;
+
+
+const DRAG_SMOOTHING = 1.0;
+
+const Z_DRAG_SCALE = 0.020;
+
+
+/*
+    These are deliberately calculated
+    from the camera orientation.
+
+    This fixes the old problem where
+    moving LEFT on screen could cause
+    the vertex to travel DOWN when
+    the head was rotated.
+*/
+
+const DRAG_SCALE = 0.018;
+
+
+let targetX = 0;
+let targetY = 0;
+let targetZ = 0;
+
+
+/* =========================================================
+   SCREEN MOVEMENT -> WORLD MOVEMENT
+========================================================= */
+
+function screenDragToWorld(
+    dx,
+    dy
+) {
+
+    const rz =
+        Number(
+            rzSlider.value
+        ) *
+        Math.PI / 180;
+
+
+    /*
+        Screen X axis projected into
+        the face's local XY plane.
+    */
+
+    const worldDX =
+        dx * Math.cos(rz) +
+        dy * Math.sin(rz);
+
+
+    const worldDY =
+        -dx * Math.sin(rz) +
+        dy * Math.cos(rz);
+
+
+    return {
+
+        x:
+            worldDX *
+            DRAG_SCALE,
+
+        y:
+            -worldDY *
+            DRAG_SCALE
+    };
+}
+
+
+/* =========================================================
+   KEEP POINT INSIDE HEAD
+========================================================= */
+
+function constrainToHead(
+    x,
+    y
+) {
+
+    const normalized =
+        Math.sqrt(
+            (x * x) /
+            (HEAD_WIDTH * HEAD_WIDTH)
+            +
+            (y * y) /
+            (HEAD_HEIGHT * HEAD_HEIGHT)
+        );
+
+
+    if (
+        normalized > 1
+    ) {
+
+        return {
+
+            x:
+                x / normalized,
+
+            y:
+                y / normalized
+        };
+    }
+
+
+    return {
+
+        x: x,
+        y: y
+    };
+}
+
+
+/* =========================================================
+   MOUSE DOWN
+========================================================= */
+
+canvas.addEventListener(
+    "mousedown",
+    e => {
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const mx =
+            e.clientX -
+            rect.left;
+
+
+        const my =
+            e.clientY -
+            rect.top;
+
+
+        /*
+            ALT rotates camera.
+        */
+
+        if (
+            e.altKey
+        ) {
+
+            dragging = true;
+
+            selectedVertex = -2;
+
+
+            startMouseX =
+                e.clientX;
+
+            startMouseY =
+                e.clientY;
+
+
+            canvas.classList.add(
+                "dragging"
+            );
+
+
+            return;
+        }
+
+
+        const index =
+            findVertex(
+                mx,
+                my
+            );
+
+
+        if (
+            index !== -1
+        ) {
+
+            selectedVertex =
+                index;
+
+
+            dragging = true;
+
+
+            startMouseX =
+                e.clientX;
+
+            startMouseY =
+                e.clientY;
+
+
+            startVertex = {
+
+                x:
+                    vertices[index].x,
+
+                y:
+                    vertices[index].y,
+
+                z:
+                    vertices[index].z
+            };
+
+
+            targetX =
+                startVertex.x;
+
+            targetY =
+                startVertex.y;
+
+            targetZ =
+                startVertex.z;
+
+
+            canvas.classList.add(
+                "dragging"
+            );
+
+
+            document.getElementById(
+                "status"
+            ).textContent =
+                e.shiftKey
+
+                ? "V" +
+                  vertices[index].id +
+                  " — Pulling vertex in 3D"
+
+                : "V" +
+                  vertices[index].id +
+                  " — Moving vertex";
+        }
+    }
+);
+
+
+/* =========================================================
+   MOUSE MOVE
+========================================================= */
+
+window.addEventListener(
+    "mousemove",
+    e => {
+
+        if (
+            !dragging
+        )
+            return;
+
+
+        const dx =
+            e.clientX -
+            startMouseX;
+
+
+        const dy =
+            e.clientY -
+            startMouseY;
+
+
+        /*
+            CAMERA ROTATION
+        */
+
+        if (
+            selectedVertex === -2
+        ) {
+
+            let ry =
+                Number(
+                    rySlider.value
+                ) +
+                dx * .35;
+
+
+            let rx =
+                Number(
+                    rxSlider.value
+                ) +
+                dy * .35;
+
+
+            rySlider.value =
+                Math.max(
+                    -90,
+                    Math.min(
+                        90,
+                        ry
+                    )
+                );
+
+
+            rxSlider.value =
+                Math.max(
+                    -90,
+                    Math.min(
+                        90,
+                        rx
+                    )
+                );
+
+
+            return;
+        }
+
+
+        if (
+            selectedVertex < 0
+        )
+            return;
+
+
+        const v =
+            vertices[
+                selectedVertex
+            ];
+
+
+        /*
+            SHIFT = Z.
+        */
+
+        if (
+            e.shiftKey
+        ) {
+
+            targetZ =
+                startVertex.z -
+                dy *
+                Z_DRAG_SCALE;
+
+
+            v.z +=
+                (
+                    targetZ -
+                    v.z
+                ) *
+                DRAG_SMOOTHING;
+
+
+            return;
+        }
+
+
+        /*
+            Normal screen-space drag.
+        */
+
+        const movement =
+            screenDragToWorld(
+                dx,
+                dy
+            );
+
+
+        targetX =
+            startVertex.x +
+            movement.x;
+
+
+        targetY =
+            startVertex.y +
+            movement.y;
+
+
+        const constrained =
+            constrainToHead(
+                targetX,
+                targetY
+            );
+
+
+        targetX =
+            constrained.x;
+
+        targetY =
+            constrained.y;
+
+
+        v.x +=
+            (
+                targetX -
+                v.x
+            ) *
+            DRAG_SMOOTHING;
+
+
+        v.y +=
+            (
+                targetY -
+                v.y
+            ) *
+            DRAG_SMOOTHING;
+    }
+);
+
+
+/* =========================================================
+   MOUSE UP
+========================================================= */
+
+window.addEventListener(
+    "mouseup",
+    () => {
+
+        dragging = false;
+
+        selectedVertex = -1;
+
+
+        canvas.classList.remove(
+            "dragging"
+        );
+
+
+        document.getElementById(
+            "status"
+        ).textContent =
+            "Click and drag any point on the face";
+    }
+);
+
+
+/* =========================================================
+   TOUCH START
+========================================================= */
+
+canvas.addEventListener(
+    "touchstart",
+    e => {
+
+        const t =
+            e.touches[0];
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const mx =
+            t.clientX -
+            rect.left;
+
+
+        const my =
+            t.clientY -
+            rect.top;
+
+
+        const index =
+            findVertex(
+                mx,
+                my
+            );
+
+
+        if (
+            index !== -1
+        ) {
+
+            selectedVertex =
+                index;
+
+
+            dragging = true;
+
+
+            startMouseX =
+                t.clientX;
+
+            startMouseY =
+                t.clientY;
+
+
+            startVertex = {
+
+                x:
+                    vertices[index].x,
+
+                y:
+                    vertices[index].y,
+
+                z:
+                    vertices[index].z
+            };
+
+
+            targetX =
+                startVertex.x;
+
+            targetY =
+                startVertex.y;
+
+            targetZ =
+                startVertex.z;
+
+
+            document.getElementById(
+                "status"
+            ).textContent =
+                "V" +
+                vertices[index].id +
+                " — Moving vertex";
+
+
+            e.preventDefault();
+        }
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =========================================================
+   TOUCH MOVE
+========================================================= */
+
+canvas.addEventListener(
+    "touchmove",
+    e => {
+
+        if (
+            !dragging ||
+            selectedVertex < 0
+        )
+            return;
+
+
+        const t =
+            e.touches[0];
+
+
+        const dx =
+            t.clientX -
+            startMouseX;
+
+
+        const dy =
+            t.clientY -
+            startMouseY;
+
+
+        const v =
+            vertices[
+                selectedVertex
+            ];
+
+
+        /*
+            Two fingers = depth.
+        */
+
+        if (
+            e.touches.length > 1
+        ) {
+
+            targetZ =
+                startVertex.z -
+                dy *
+                Z_DRAG_SCALE;
+
+
+            v.z +=
+                (
+                    targetZ -
+                    v.z
+                ) *
+                DRAG_SMOOTHING;
+
+
+        } else {
+
+            const movement =
+                screenDragToWorld(
+                    dx,
+                    dy
+                );
+
+
+            targetX =
+                startVertex.x +
+                movement.x;
+
+
+            targetY =
+                startVertex.y +
+                movement.y;
+
+
+            const constrained =
+                constrainToHead(
+                    targetX,
+                    targetY
+                );
+
+
+            targetX =
+                constrained.x;
+
+            targetY =
+                constrained.y;
+
+
+            v.x +=
+                (
+                    targetX -
+                    v.x
+                ) *
+                DRAG_SMOOTHING;
+
+
+            v.y +=
+                (
+                    targetY -
+                    v.y
+                ) *
+                DRAG_SMOOTHING;
+        }
+
+
+        e.preventDefault();
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =========================================================
+   TOUCH END
+========================================================= */
+
+canvas.addEventListener(
+    "touchend",
+    () => {
+
+        dragging = false;
+
+        selectedVertex = -1;
+    }
+);
+
+
+/* =========================================================
+   WIRE BUTTON
+========================================================= */
+
+document.getElementById(
+    "wire"
+).onclick = () => {
+
+    showWire =
+        !showWire;
+
+
+    document.getElementById(
+        "wire"
+    ).textContent =
+        showWire
+        ? "Hide Mesh Lines"
+        : "Show Mesh Lines";
+};
+
+
+/* =========================================================
+   POINT BUTTON
+========================================================= */
+
+document.getElementById(
+    "points"
+).onclick = () => {
+
+    showPoints =
+        !showPoints;
+
+
+    document.getElementById(
+        "points"
+    ).textContent =
+        showPoints
+        ? "Hide Points"
+        : "Show Points";
+};
+
+
+/* =========================================================
+   IDS BUTTON
+========================================================= */
+
+document.getElementById(
+    "ids"
+).onclick = () => {
+
+    showIDs =
+        !showIDs;
+
+
+    document.getElementById(
+        "ids"
+    ).textContent =
+        showIDs
+        ? "Hide Vertex IDs"
+        : "Show Vertex IDs";
+};
+
+
+/* =========================================================
+   NECK BUTTON
+========================================================= */
+
+document.getElementById(
+    "neck"
+).onclick = () => {
+
+    showNeck =
+        !showNeck;
+
+
+    document.getElementById(
+        "neck"
+    ).textContent =
+        showNeck
+        ? "Hide Neck"
+        : "Show Neck";
+};
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+document.getElementById(
+    "reset"
+).onclick = () => {
+
+    buildMesh();
+
+
+    rxSlider.value = 0;
+
+    rySlider.value = 0;
+
+    rzSlider.value = 0;
+
+
+    selectedVertex = -1;
+
+    dragging = false;
+};
+
+
+/* =========================================================
+   DENSITY
+========================================================= */
+
+densitySlider.addEventListener(
+    "input",
+    () => {
+
+        buildMesh();
+
+        selectedVertex = -1;
+
+        dragging = false;
+    }
+);
+
+
+/* =========================================================
+   ANIMATION
+========================================================= */
+
+function animate() {
+
+    draw();
+
+    requestAnimationFrame(
+        animate
+    );
+}
+
+
+/* =========================================================
+   START
+========================================================= */
+
+buildMesh();
+
+animate();
+
+</script>
+
+</body>
+</html>

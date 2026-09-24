@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recursive Research Engine — 3D Face Flip Back</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:#070a0f;color:#dce7f5;font-family:Arial,sans-serif}
+button,textarea,input{font:inherit}
+button{cursor:pointer}
+#toolbar{
+  position:sticky;top:0;z-index:1000;
+  display:flex;gap:7px;align-items:center;
+  padding:10px;background:#0b111a;border-bottom:1px solid #263447;
+}
+#toolbar button{
+  background:#111b28;color:#cfe0f4;border:1px solid #304158;
+  border-radius:6px;padding:7px 11px;
+}
+#toolbar button:hover{background:#172638}
+#pathbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:1000;
+  padding:7px 12px;background:#0b111a;border-top:1px solid #263447;
+  color:#65bfff;font-size:12px;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;
+}
+#workspace{padding:18px 18px 55px}
+#rootArea{
+  background:#0c121b;border:1px solid #29384c;border-radius:9px;
+  padding:12px;margin-bottom:18px;
+}
+textarea{
+  width:100%;min-height:130px;resize:vertical;
+  background:#080d14;color:#dbe8f7;border:1px solid #29384c;
+  border-radius:7px;padding:12px;outline:none;line-height:1.55;
+}
+textarea:focus{border-color:#4288c7}
+.action-row{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
+.action-row button,.add-paragraph{
+  background:#101a27;color:#cfe0f4;border:1px solid #304158;
+  border-radius:6px;padding:6px 10px;
+}
+.paragraph{
+  padding:10px;margin:8px 0;background:#090f17;
+  border:1px solid #202d3e;border-radius:7px;line-height:1.9;
+}
+.word{
+  display:inline-block;padding:1px 3px;border-radius:4px;
+  cursor:pointer;transition:.12s;
+}
+.word:hover{background:#17304a;color:#71c8ff}
+.word.face-origin-highlight{
+  background:#245d86;color:white;
+  box-shadow:0 0 0 2px #58baff;
+  animation:wordPulse .8s ease;
+}
+@keyframes wordPulse{
+  0%{box-shadow:0 0 0 7px rgba(88,186,255,.4)}
+  100%{box-shadow:0 0 0 2px #58baff}
+}
+.research-box{
+  margin:10px 0 10px 22px;
+  border:1px solid #304158;border-radius:9px;
+  background:#0b1119;overflow:hidden;
+}
+.research-head{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;background:#0f1824;border-bottom:1px solid #29384c;
+}
+.research-head .label{
+  flex:1;min-width:0;color:#7ec9ff;font-weight:bold;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.collapse{
+  background:#131f2d;color:#b9cbe0;border:1px solid #304158;
+  border-radius:5px;padding:3px 8px;
+}
+.research-body{padding:9px}
+.research-box:not(.open)>.research-body{display:none}
+.research-tabs{
+  display:flex;gap:4px;overflow-x:auto;
+  border-bottom:1px solid #29384c;padding-bottom:6px;
+}
+.research-tab{
+  flex:0 0 auto;background:#0b121c;color:#8398af;
+  border:1px solid #263447;border-radius:5px;padding:6px 9px;
+  font-size:11px;
+}
+.research-tab.active{background:#17304a;color:#fff;border-color:#4288c7}
+.tab-content{display:none;padding-top:9px}
+.tab-content.active{display:block}
+.tab-text{
+  min-height:100px;background:#080d14;border:1px solid #263447;
+  border-radius:7px;padding:10px;outline:none;line-height:1.5;
+}
+.tab-text:focus{border-color:#4288c7}
+.level-grid{
+  display:grid;grid-template-columns:100px 1fr;gap:5px;
+  font-size:12px;color:#94a9c0;
+}
+.level-grid b{color:#dce7f5}
+
+/* FACE FLIP */
+.face-flip{
+  width:100%;
+  perspective:1200px;
+}
+.face-flip-inner{
+  position:relative;
+  width:100%;
+  min-height:560px;
+  transform-style:preserve-3d;
+  transition:transform .48s cubic-bezier(.2,.75,.25,1);
+}
+.face-flip.flipped .face-flip-inner{
+  transform:rotateY(180deg);
+}
+.face-side{
+  position:absolute;inset:0;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+  border:1px solid #263447;border-radius:9px;
+  background:#080d14;overflow:hidden;
+}
+.face-front{transform:rotateY(0deg)}
+.face-back{
+  transform:rotateY(180deg);
+  display:flex;align-items:center;justify-content:center;
+}
+.face-back-inner{
+  width:min(620px,92%);
+  text-align:center;
+  padding:35px 25px;
+}
+.back-eyebrow{
+  color:#58baff;text-transform:uppercase;
+  letter-spacing:2px;font-size:10px;margin-bottom:13px;
+}
+.back-title{font-size:25px;font-weight:bold;margin-bottom:9px}
+.back-word{
+  margin:22px 0;padding:18px;
+  border:1px solid #31506c;border-radius:10px;
+  background:#0d1722;color:#72c9ff;font-size:28px;
+  font-weight:bold;word-break:break-word;
+}
+.back-info{color:#8194aa;font-size:12px;line-height:1.6;margin-bottom:20px}
+.go-back{
+  width:100%;max-width:360px;
+  background:#173653;color:#fff;border:1px solid #58baff;
+  border-radius:8px;padding:13px 18px;font-size:14px;
+}
+.go-back:hover{background:#204b70}
+.face-history-mini{
+  display:flex;align-items:center;gap:7px;
+  padding:7px;background:#090f17;border-bottom:1px solid #263447;
+}
+.face-history-mini button{
+  min-width:38px;height:30px;
+  background:#101a27;color:#cfe0f4;border:1px solid #304158;
+  border-radius:5px;
+}
+.face-history-mini .current{
+  flex:1;text-align:center;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+  font-size:11px;color:#7890a8;
+}
+.face-title{
+  padding:8px 10px;color:#8ca3bb;font-size:11px;
+  border-bottom:1px solid #1e2b3c;
+}
+.face-area{height:455px;position:relative}
+.face-canvas{width:100%;height:100%;display:block}
+.face-panel{
+  position:absolute;top:8px;right:8px;width:190px;
+  background:rgba(8,13,20,.94);border:1px solid #304158;
+  border-radius:7px;padding:8px;font-size:10px;
+}
+.face-panel label{
+  display:block;color:#8298af;margin:7px 0 3px;
+}
+.face-panel input[type=range]{width:100%}
+.face-panel input[type=checkbox]{vertical-align:middle}
+.face-buttons{display:flex;gap:5px;margin-top:8px}
+.face-panel button{
+  flex:1;background:#101a27;color:#cfe0f4;
+  border:1px solid #304158;border-radius:5px;padding:5px;
+}
+.face-status{
+  position:absolute;left:8px;bottom:8px;
+  background:rgba(8,13,20,.9);border:1px solid #263447;
+  border-radius:6px;padding:6px;color:#7fa0bc;font-size:10px;
+}
+.resize-row{
+  display:flex;gap:8px;align-items:center;
+  margin-top:8px;font-size:10px;color:#7f93aa;
+}
+.resize-row input{width:90px}
+</style>
+</head>
+
+<body>
+
+<div id="toolbar">
+  <button id="openAll">Open All</button>
+  <button id="closeAll">Close All</button>
+  <button id="clearAll">Clear All</button>
+  <span style="color:#53677e;font-size:11px">Recursive Research Depth Engine</span>
+</div>
+
+<main id="workspace">
+  <section id="rootArea">
+    <textarea id="rootText" placeholder="Put your research text here... Every word becomes clickable."></textarea>
+    <div class="action-row">
+      <button id="addRoot">Add Paragraph</button>
+    </div>
+    <div id="rootParagraphs"></div>
+  </section>
+</main>
+
+<div id="pathbar">Selected path: —</div>
+
+<script>
+/* =========================================================
+   GLOBAL STATE
+========================================================= */
+const rootText=document.getElementById("rootText");
+const rootParagraphs=document.getElementById("rootParagraphs");
+const workspace=document.getElementById("workspace");
+const pathbar=document.getElementById("pathbar");
+
+const boxes=[];
+const faceHistory=[];
+let faceHistoryIndex=-1;
+let historyChanging=false;
+
+/* =========================================================
+   WORDS
+========================================================= */
+function makeWords(text, ownerBox=null){
+  const frag=document.createDocumentFragment();
+  const parts=text.split(/(\s+)/);
+
+  parts.forEach(part=>{
+    if(!part.trim()){
+      frag.appendChild(document.createTextNode(part));
+      return;
+    }
+
+    const span=document.createElement("span");
+    span.className="word";
+    span.textContent=part.replace(/[.,!?;:()[\]{}"'“”‘’]/g,"");
+    span.dataset.raw=part;
+
+    if(!span.textContent){
+      frag.appendChild(document.createTextNode(part));
+      return;
+    }
+
+    span.addEventListener("click",e=>{
+      e.stopPropagation();
+      openWord(span,ownerBox);
+    });
+
+    frag.appendChild(span);
+  });
+
+  return frag;
+}
+
+function addParagraph(container,text,ownerBox=null){
+  const p=document.createElement("div");
+  p.className="paragraph";
+  p.appendChild(makeWords(text,ownerBox));
+  container.appendChild(p);
+  return p;
+}
+
+document.getElementById("addRoot").onclick=()=>{
+  const text=rootText.value.trim();
+  if(!text)return;
+  addParagraph(rootParagraphs,text,null);
+  rootText.value="";
+};
+
+rootText.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
+    e.preventDefault();
+    document.getElementById("addRoot").click();
+  }
+});
+
+/* =========================================================
+   RESEARCH BOX
+========================================================= */
+function getDepth(box){
+  let n=0,p=box;
+  while(p){
+    n++;
+    p=p.parentElement?.closest(".research-box");
+  }
+  return n;
+}
+
+function getPath(box){
+  const path=[];
+  let current=box;
+
+  while(current){
+    if(current._ownerWord){
+      path.unshift(current._ownerWord.textContent.trim());
+    }
+    current=current.parentElement?.closest(".research-box");
+  }
+
+  return path.join(" → ");
+}
+
+function updateSelection(path){
+  pathbar.textContent="Selected path: "+(path||"—");
+}
+
+function openWord(word,ownerBox){
+  if(!word)return;
+
+  let box=word._researchBox;
+
+  if(!box){
+    box=createResearchBox(word,ownerBox);
+    word._researchBox=box;
+  }
+
+  box.classList.add("open");
+
+  updateSelection(getPath(box));
+
+  box.scrollIntoView({
+    behavior:"smooth",
+    block:"nearest"
+  });
+}
+
+function createResearchBox(ownerWord,parentBox){
+  const box=document.createElement("section");
+  box.className="research-box open";
+
+  box._ownerWord=ownerWord;
+  box._parentBox=parentBox||null;
+
+  if(parentBox){
+    parentBox.querySelector(".research-body").appendChild(box);
+  }else{
+    workspace.appendChild(box);
+  }
+
+  boxes.push(box);
+
+  const head=document.createElement("div");
+  head.className="research-head";
+
+  const label=document.createElement("div");
+  label.className="label";
+  label.textContent="Research: "+ownerWord.textContent.trim();
+
+  const collapse=document.createElement("button");
+  collapse.className="collapse";
+  collapse.textContent="−";
+
+  collapse.onclick=e=>{
+    e.stopPropagation();
+    box.classList.toggle("open");
+    collapse.textContent=box.classList.contains("open")?"−":"+";
+  };
+
+  head.append(label,collapse);
+  box.appendChild(head);
+
+  const body=document.createElement("div");
+  body.className="research-body";
+  box.appendChild(body);
+
+  const tabs=document.createElement("div");
+  tabs.className="research-tabs";
+
+  const contents=document.createElement("div");
+
+  box._tabsContainer=tabs;
+  box._contentsContainer=contents;
+
+  body.append(tabs,contents);
+
+  const tabNames=[
+    "Context",
+    "Definition",
+    "History",
+    "How It Works",
+    "Examples",
+    "Sources",
+    "Level"
+  ];
+
+  tabNames.forEach((name,i)=>{
+    createNormalTab(box,name,i);
+  });
+
+  createFaceTab(box,"3D Face",tabNames.length);
+
+  activateTab(box,0);
+
+  return box;
+}
+
+/* =========================================================
+   NORMAL TABS
+========================================================= */
+function createNormalTab(box,title,index){
+  const btn=document.createElement("button");
+  btn.className="research-tab";
+  btn.textContent=title;
+  btn.dataset.index=index;
+
+  const content=document.createElement("div");
+  content.className="tab-content";
+  content.dataset.index=index;
+
+  if(title==="Level"){
+    const grid=document.createElement("div");
+    grid.className="level-grid";
+
+    const fields=[
+      ["Level",()=>getDepth(box)],
+      ["Current",()=>box._ownerWord?.textContent.trim()||""],
+      ["Parent",()=>box.parentElement?.closest(".research-box")?._ownerWord?.textContent.trim()||"Root"],
+      ["Path",()=>getPath(box)]
+    ];
+
+    fields.forEach(([name,fn])=>{
+      const a=document.createElement("span");
+      a.textContent=name;
+      const b=document.createElement("b");
+      b.textContent=fn();
+      grid.append(a,b);
+    });
+
+    content.appendChild(grid);
+  }else{
+    const editor=document.createElement("div");
+    editor.className="tab-text";
+    editor.contentEditable="true";
+    editor.spellcheck=false;
+    editor.dataset.placeholder="Add "+title+" information...";
+    editor.textContent="";
+
+    editor.addEventListener("keydown",e=>{
+      if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
+        e.preventDefault();
+        const p=document.createElement("div");
+        p.className="paragraph";
+        p.appendChild(makeWords(editor.innerText,box));
+        content.appendChild(p);
+        editor.textContent="";
+      }
+    });
+
+    const add=document.createElement("button");
+    add.className="add-paragraph";
+    add.style.marginTop="7px";
+    add.textContent="Add Paragraph";
+
+    add.onclick=()=>{
+      const text=editor.innerText.trim();
+      if(!text)return;
+
+      const p=document.createElement("div");
+      p.className="paragraph";
+      p.appendChild(makeWords(text,box));
+
+      content.insertBefore(p,add);
+      editor.textContent="";
+    };
+
+    content.append(editor,add);
+  }
+
+  btn.onclick=()=>{
+    activateTab(box,index);
+  };
+
+  box._tabsContainer.appendChild(btn);
+  box._contentsContainer.appendChild(content);
+}
+
+function activateTab(box,index){
+  box.querySelectorAll(".research-tab").forEach(b=>{
+    b.classList.toggle("active",Number(b.dataset.index)===index);
+  });
+
+  box.querySelectorAll(".tab-content").forEach(c=>{
+    c.classList.toggle("active",Number(c.dataset.index)===index);
+  });
+
+  if(box._faceEditor && index===box._faceIndex){
+    activateFace(box,true);
+  }
+}
+
+/* =========================================================
+   FACE HISTORY
+========================================================= */
+function registerFaceHistory(box){
+  if(!box || !box._faceEditor || !box._ownerWord)return;
+
+  const word=box._ownerWord;
+
+  /* Existing exact word instance: just move to it. */
+  const existing=faceHistory.findIndex(item=>item.word===word);
+
+  if(existing!==-1){
+    faceHistoryIndex=existing;
+    updateHistoryDisplays();
+    return;
+  }
+
+  /* Browser-style branch deletion. */
+  if(faceHistoryIndex<faceHistory.length-1){
+    faceHistory.splice(faceHistoryIndex+1);
+  }
+
+  faceHistory.push({
+    word:word,
+    box:box,
+    face:box._faceEditor
+  });
+
+  faceHistoryIndex=faceHistory.length-1;
+  updateHistoryDisplays();
+}
+
+function updateHistoryDisplays(){
+  document.querySelectorAll(".face-history-mini").forEach(nav=>{
+    const box=nav.closest(".research-box");
+    const left=nav.querySelector(".left-history");
+    const right=nav.querySelector(".right-history");
+    const current=nav.querySelector(".current");
+
+    left.disabled=faceHistoryIndex<=0;
+    right.disabled=faceHistoryIndex<0 ||
+                   faceHistoryIndex>=faceHistory.length-1;
+
+    if(faceHistoryIndex>=0){
+      const item=faceHistory[faceHistoryIndex];
+      current.textContent=
+        "Word "+(faceHistoryIndex+1)+" / "+faceHistory.length+
+        "  •  "+item.word.textContent.trim();
+    }else{
+      current.textContent="No worked-on words yet";
+    }
+  });
+}
+
+function navigateFaceHistory(direction){
+  if(historyChanging)return;
+
+  const next=faceHistoryIndex+direction;
+
+  if(next<0 || next>=faceHistory.length)return;
+
+  const item=faceHistory[next];
+
+  if(!item || !item.word || !item.box)return;
+
+  historyChanging=true;
+  faceHistoryIndex=next;
+
+  openFaceTargetAncestors(item.word,item.box);
+
+  requestAnimationFrame(()=>{
+    item.box.classList.add("open");
+
+    item.word.scrollIntoView({
+      behavior:"smooth",
+      block:"center",
+      inline:"nearest"
+    });
+
+    item.word.classList.remove("face-origin-highlight");
+    void item.word.offsetWidth;
+    item.word.classList.add("face-origin-highlight");
+
+    updateSelection(getPath(item.box));
+
+    activateFace(item.box,false);
+
+    if(item.face){
+      item.face.activate();
+      item.face.draw();
+      item.face.updateStatus();
+    }
+
+    updateHistoryDisplays();
+
+    setTimeout(()=>{
+      historyChanging=false;
+    },550);
+  });
+}
+
+/*
+  Reopens only the recursive ancestor chain needed
+  to reach the exact historical word.
+*/
+function openFaceTargetAncestors(targetWord,targetBox){
+  const keep=new Set();
+
+  let current=targetBox;
+
+  while(current){
+    keep.add(current);
+    current=current.parentElement?.closest(".research-box");
+  }
+
+  boxes.forEach(box=>{
+    if(keep.has(box)){
+      box.classList.add("open");
+
+      const collapse=box.querySelector(".collapse");
+      if(collapse)collapse.textContent="−";
+    }else{
+      box.classList.remove("open");
+
+      const collapse=box.querySelector(".collapse");
+      if(collapse)collapse.textContent="+";
+    }
+  });
+
+  /* Reopen the parent chain in case a box is nested in
+     a previously collapsed branch. */
+  let b=targetBox;
+  while(b){
+    b.classList.add("open");
+    b=b.parentElement?.closest(".research-box");
+  }
+}
+
+/* =========================================================
+   FACE FLIP PANEL
+========================================================= */
+function createFaceTab(box,title,index){
+  box._faceIndex=index;
+
+  const button=document.createElement("button");
+  button.className="research-tab";
+  button.textContent=title;
+  button.dataset.index=index;
+  button.dataset.face="true";
+
+  const content=document.createElement("div");
+  content.className="tab-content";
+  content.dataset.index=index;
+  content.dataset.face="true";
+
+  const flip=document.createElement("div");
+  flip.className="face-flip";
+
+  const inner=document.createElement("div");
+  inner.className="face-flip-inner";
+
+  /* FRONT */
+  const front=document.createElement("div");
+  front.className="face-side face-front";
+
+  const nav=document.createElement("div");
+  nav.className="face-history-mini";
+
+  const left=document.createElement("button");
+  left.className="left-history";
+  left.textContent="←";
+  left.title="Previous worked-on word";
+
+  const current=document.createElement("div");
+  current.className="current";
+  current.textContent="No worked-on words yet";
+
+  const right=document.createElement("button");
+  right.className="right-history";
+  right.textContent="→";
+  right.title="Next worked-on word";
+
+  nav.append(left,current,right);
+
+  const titleBar=document.createElement("div");
+  titleBar.className="face-title";
+  titleBar.textContent="Morphing 3D Face";
+
+  const area=document.createElement("div");
+  area.className="face-area";
+
+  front.append(nav,titleBar,area);
+
+  /* BACK */
+  const back=document.createElement("div");
+  back.className="face-side face-back";
+
+  const backInner=document.createElement("div");
+  backInner.className="face-back-inner";
+
+  const eyebrow=document.createElement("div");
+  eyebrow.className="back-eyebrow";
+  eyebrow.textContent="Recursive History";
+
+  const backTitle=document.createElement("div");
+  backTitle.className="back-title";
+  backTitle.textContent="Go Back to Previous Word";
+
+  const backWord=document.createElement("div");
+  backWord.className="back-word";
+
+  const backInfo=document.createElement("div");
+  backInfo.className="back-info";
+  backInfo.textContent=
+    "This returns the recursive page to the previously worked-on word. "+
+    "Its existing 3D Face state is preserved.";
+
+  const goBack=document.createElement("button");
+  goBack.className="go-back";
+  goBack.textContent="← Go Back to Word";
+
+  backInner.append(
+    eyebrow,
+    backTitle,
+    backWord,
+    backInfo,
+    goBack
+  );
+
+  back.appendChild(backInner);
+
+  inner.append(front,back);
+  flip.appendChild(inner);
+  content.appendChild(flip);
+
+  box._faceFlip=flip;
+  box._faceBackWord=backWord;
+
+  left.onclick=e=>{
+    e.stopPropagation();
+
+    if(faceHistoryIndex<=0)return;
+
+    const previous=faceHistory[faceHistoryIndex-1];
+
+    backWord.textContent=previous.word.textContent.trim();
+
+    flip.classList.add("flipped");
+  };
+
+  right.onclick=e=>{
+    e.stopPropagation();
+
+    if(faceHistoryIndex>=faceHistory.length-1)return;
+
+    const next=faceHistory[faceHistoryIndex+1];
+
+    backWord.textContent=next.word.textContent.trim();
+
+    flip.classList.add("flipped");
+  };
+
+  goBack.onclick=e=>{
+    e.stopPropagation();
+
+    const target=
+      faceHistory[faceHistoryIndex-1] ||
+      faceHistory[faceHistoryIndex+1];
+
+    if(!target){
+      flip.classList.remove("flipped");
+      return;
+    }
+
+    /* Flip visually first, then snap the entire recursive
+       interface to the exact historical word. */
+    flip.classList.remove("flipped");
+
+    const targetIndex=faceHistory.indexOf(target);
+    if(targetIndex!==-1){
+      faceHistoryIndex=targetIndex;
+    }
+
+    requestAnimationFrame(()=>{
+      openFaceTargetAncestors(target.word,target.box);
+
+      target.word.scrollIntoView({
+        behavior:"smooth",
+        block:"center",
+        inline:"nearest"
+      });
+
+      target.word.classList.remove("face-origin-highlight");
+      void target.word.offsetWidth;
+      target.word.classList.add("face-origin-highlight");
+
+      updateSelection(getPath(target.box));
+
+      activateFace(target.box,false);
+
+      if(target.face){
+        target.face.activate();
+        target.face.draw();
+        target.face.updateStatus();
+      }
+
+      updateHistoryDisplays();
+    });
+  };
+
+  button.onclick=()=>{
+    activateFace(box,true);
+  };
+
+  box._tabsContainer.appendChild(button);
+  box._contentsContainer.appendChild(content);
+
+  box._faceEditor=createFaceEditor(area,box);
+
+  updateHistoryDisplays();
+}
+
+/* =========================================================
+   FACE EDITOR
+========================================================= */
+function createFaceEditor(host,box){
+  const canvas=document.createElement("canvas");
+  canvas.className="face-canvas";
+
+  const panel=document.createElement("div");
+  panel.className="face-panel";
+
+  function range(label,min,max,value,step=1){
+    const wrap=document.createElement("label");
+    wrap.textContent=label;
+
+    const input=document.createElement("input");
+    input.type="range";
+    input.min=min;
+    input.max=max;
+    input.value=value;
+    input.step=step;
+
+    wrap.appendChild(input);
+    panel.appendChild(wrap);
+
+    return input;
+  }
+
+  const rx=range("X Rotation",-90,90,0);
+  const ry=range("Y Rotation",-90,90,0);
+  const rz=range("Z Rotation",-180,180,0);
+  const density=range("Mesh Density",5,25,15);
+
+  const meshLabel=document.createElement("label");
+  const mesh=document.createElement("input");
+  mesh.type="checkbox";
+  mesh.checked=true;
+  meshLabel.append(mesh," Hide Mesh Lines");
+  panel.appendChild(meshLabel);
+
+  const pointsLabel=document.createElement("label");
+  const points=document.createElement("input");
+  points.type="checkbox";
+  points.checked=true;
+  pointsLabel.append(points," Hide Points");
+  panel.appendChild(pointsLabel);
+
+  const idsLabel=document.createElement("label");
+  const ids=document.createElement("input");
+  ids.type="checkbox";
+  ids.checked=false;
+  idsLabel.append(ids," Hide Vertex IDs");
+  panel.appendChild(idsLabel);
+
+  const neckLabel=document.createElement("label");
+  const neck=document.createElement("input");
+  neck.type="checkbox";
+  neck.checked=true;
+  neckLabel.append(neck," Hide Neck");
+  panel.appendChild(neckLabel);
+
+  const buttons=document.createElement("div");
+  buttons.className="face-buttons";
+
+  const reset=document.createElement("button");
+  reset.textContent="Reset";
+
+  const flipButton=document.createElement("button");
+  flipButton.textContent="↩ Back";
+
+  buttons.append(reset,flipButton);
+  panel.appendChild(buttons);
+
+  const status=document.createElement("div");
+  status.className="face-status";
+
+  host.append(canvas,panel,status);
+
+  const ctx=canvas.getContext("2d");
+
+  const state={
+    active:false,
+    N:15,
+    rx:0,
+    ry:0,
+    rz:0,
+    vertices:[],
+    original:[],
+    selectedVertex:-1,
+    dragging:false,
+    depthDragging:false,
+    startX:0,
+    startY:0,
+    startVertex:null,
+    dpr:window.devicePixelRatio||1
+  };
+
+  function build(){
+    state.N=Number(density.value);
+    state.vertices=[];
+    state.original=[];
+
+    for(let y=0;y<state.N;y++){
+      for(let x=0;x<state.N;x++){
+        const u=x/(state.N-1);
+        const v=y/(state.N-1);
+
+        const px=(u-.5)*300;
+        const py=(v-.5)*330;
+
+        const dx=u-.5;
+        const dy=v-.47;
+
+        let z=105*Math.max(0,1-(dx*dx*4+dy*dy*3));
+        z+=22*Math.sin(u*Math.PI)*Math.sin(v*Math.PI);
+
+        const point={x:px,y:py,z:z};
+        state.vertices.push({...point});
+        state.original.push({...point});
+      }
+    }
+
+    state.selectedVertex=-1;
+    draw();
+  }
+
+  function resize(){
+    const r=canvas.getBoundingClientRect();
+    state.dpr=window.devicePixelRatio||1;
+    canvas.width=Math.max(1,Math.floor(r.width*state.dpr));
+    canvas.height=Math.max(1,Math.floor(r.height*state.dpr));
+    ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
+    draw();
+  }
+
+  function rotate(p){
+    let x=p.x,y=p.y,z=p.z;
+
+    const ax=state.rx*Math.PI/180;
+    const ay=state.ry*Math.PI/180;
+    const az=state.rz*Math.PI/180;
+
+    let cy=Math.cos(ax),sy=Math.sin(ax);
+    let ny=y*cy-z*sy;
+    let nz=y*sy+z*cy;
+    y=ny;z=nz;
+
+    cy=Math.cos(ay);sy=Math.sin(ay);
+    let nx=x*cy+z*sy;
+    nz=-x*sy+z*cy;
+    x=nx;z=nz;
+
+    cy=Math.cos(az);sy=Math.sin(az);
+    nx=x*cy-y*sy;
+    ny=x*sy+y*cy;
+
+    return {x:nx,y:ny,z:z};
+  }
+
+  function project(p){
+    const q=rotate(p);
+    const r=canvas.getBoundingClientRect();
+
+    const perspective=650;
+    const scale=perspective/(perspective-q.z);
+
+    return {
+      x:r.width/2+q.x*scale,
+      y:r.height/2+q.y*scale,
+      z:q.z,
+      scale
+    };
+  }
+
+  function drawGrid(){
+    const r=canvas.getBoundingClientRect();
+
+    ctx.fillStyle="#070b11";
+    ctx.fillRect(0,0,r.width,r.height);
+
+    ctx.strokeStyle="#101c29";
+    ctx.lineWidth=1;
+
+    for(let x=0;x<r.width;x+=30){
+      ctx.beginPath();
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,r.height);
+      ctx.stroke();
+    }
+
+    for(let y=0;y<r.height;y+=30){
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(r.width,y);
+      ctx.stroke();
+    }
+  }
+
+  function drawNeck(){
+    if(!neck.checked)return;
+
+    const pts=[
+      {x:-105,y:120,z:20},
+      {x:105,y:120,z:20},
+      {x:82,y:250,z:0},
+      {x:-82,y:250,z:0}
+    ].map(project);
+
+    ctx.beginPath();
+    pts.forEach((p,i)=>{
+      if(i===0)ctx.moveTo(p.x,p.y);
+      else ctx.lineTo(p.x,p.y);
+    });
+    ctx.closePath();
+
+    ctx.fillStyle="#111b27";
+    ctx.fill();
+    ctx.strokeStyle="#38506a";
+    ctx.stroke();
+  }
+
+  function draw(){
+    if(!canvas.width)return;
+
+    drawGrid();
+
+    const projected=state.vertices.map(project);
+
+    drawNeck();
+
+    if(mesh.checked){
+      ctx.strokeStyle="#31506a";
+      ctx.lineWidth=1;
+
+      for(let y=0;y<state.N;y++){
+        ctx.beginPath();
+
+        for(let x=0;x<state.N;x++){
+          const p=projected[y*state.N+x];
+
+          if(x===0)ctx.moveTo(p.x,p.y);
+          else ctx.lineTo(p.x,p.y);
+        }
+
+        ctx.stroke();
+      }
+
+      for(let x=0;x<state.N;x++){
+        ctx.beginPath();
+
+        for(let y=0;y<state.N;y++){
+          const p=projected[y*state.N+x];
+
+          if(y===0)ctx.moveTo(p.x,p.y);
+          else ctx.lineTo(p.x,p.y);
+        }
+
+        ctx.stroke();
+      }
+    }
+
+    if(points.checked){
+      projected.forEach((p,i)=>{
+        ctx.beginPath();
+        ctx.arc(
+          p.x,p.y,
+          i===state.selectedVertex?5:2.5,
+          0,Math.PI*2
+        );
+
+        ctx.fillStyle=
+          i===state.selectedVertex?"#ffffff":"#62bfff";
+
+        ctx.fill();
+      });
+    }
+
+    if(ids.checked){
+      ctx.fillStyle="#7890a8";
+      ctx.font="8px Arial";
+
+      projected.forEach((p,i)=>{
+        ctx.fillText(i,p.x+4,p.y-4);
+      });
+    }
+
+    if(state.selectedVertex>=0){
+      const p=projected[state.selectedVertex];
+
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,9,0,Math.PI*2);
+      ctx.strokeStyle="#ffffff";
+      ctx.stroke();
+    }
+
+    updateStatus();
+  }
+
+  function updateStatus(){
+    const selected=
+      state.selectedVertex>=0
+      ?"Vertex "+state.selectedVertex
+      :"No vertex selected";
+
+    status.textContent=
+      selected+
+      " • "+state.N+"×"+state.N+
+      " • Drag point • Shift+Drag depth • Alt+Drag rotate";
+  }
+
+  function findVertex(clientX,clientY){
+    const r=canvas.getBoundingClientRect();
+
+    const x=clientX-r.left;
+    const y=clientY-r.top;
+
+    let best=-1;
+    let dist=Infinity;
+
+    state.vertices.forEach((v,i)=>{
+      const p=project(v);
+      const d=Math.hypot(p.x-x,p.y-y);
+
+      if(d<dist && d<15){
+        dist=d;
+        best=i;
+      }
+    });
+
+    return best;
+  }
+
+  function pointerDown(e){
+    if(!state.active)return;
+
+    const r=canvas.getBoundingClientRect();
+
+    if(e.altKey){
+      state.dragging=true;
+      state.depthDragging=false;
+      state.startX=e.clientX;
+      state.startY=e.clientY;
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    const i=findVertex(e.clientX,e.clientY);
+
+    if(i<0)return;
+
+    state.selectedVertex=i;
+    state.dragging=true;
+    state.depthDragging=e.shiftKey;
+    state.startX=e.clientX;
+    state.startY=e.clientY;
+    state.startVertex={...state.vertices[i]};
+
+    canvas.setPointerCapture(e.pointerId);
+    draw();
+  }
+
+  function pointerMove(e){
+    if(!state.dragging)return;
+
+    const dx=e.clientX-state.startX;
+    const dy=e.clientY-state.startY;
+
+    if(e.altKey){
+      state.ry+=dx*.35;
+      state.rx-=dy*.35;
+      ry.value=state.ry;
+      rx.value=state.rx;
+      draw();
+      return;
+    }
+
+    if(state.selectedVertex<0)return;
+
+    const v=state.vertices[state.selectedVertex];
+
+    if(state.depthDragging || e.shiftKey){
+      v.z=state.startVertex.z+dx*.8-dy*.2;
+    }else{
+      v.x=state.startVertex.x+dx;
+      v.y=state.startVertex.y+dy;
+    }
+
+    draw();
+  }
+
+  function pointerUp(e){
+    if(!state.dragging)return;
+
+    state.dragging=false;
+    state.depthDragging=false;
+
+    try{
+      canvas.releasePointerCapture(e.pointerId);
+    }catch(_){}
+
+    draw();
+  }
+
+  canvas.addEventListener("pointerdown",pointerDown);
+  canvas.addEventListener("pointermove",pointerMove);
+  canvas.addEventListener("pointerup",pointerUp);
+  canvas.addEventListener("pointercancel",pointerUp);
+
+  [rx,ry,rz].forEach((input,i)=>{
+    input.oninput=()=>{
+      state.rx=Number(rx.value);
+      state.ry=Number(ry.value);
+      state.rz=Number(rz.value);
+      draw();
+    };
+  });
+
+  density.oninput=()=>{
+    const old=state.N;
+    const n=Number(density.value);
+
+    if(n===old)return;
+
+    state.N=n;
+    build();
+  };
+
+  mesh.onchange=draw;
+  points.onchange=draw;
+  ids.onchange=draw;
+  neck.onchange=draw;
+
+  reset.onclick=()=>{
+    state.rx=0;
+    state.ry=0;
+    state.rz=0;
+
+    rx.value=0;
+    ry.value=0;
+    rz.value=0;
+
+    state.vertices=state.original.map(v=>({...v}));
+    state.selectedVertex=-1;
+
+    draw();
+  };
+
+  flipButton.onclick=()=>{
+    if(faceHistoryIndex<=0)return;
+
+    const previous=faceHistory[faceHistoryIndex-1];
+
+    box._faceBackWord.textContent=
+      previous.word.textContent.trim();
+
+    box._faceFlip.classList.add("flipped");
+  };
+
+  const observer=new ResizeObserver(resize);
+  observer.observe(host);
+
+  build();
+
+  return {
+    state,
+    activate(){
+      state.active=true;
+      draw();
+    },
+    deactivate(){
+      state.active=false;
+    },
+    draw,
+    updateStatus
+  };
+}
+
+/* =========================================================
+   FACE ACTIVATION
+========================================================= */
+function activateFace(box,record=true){
+  if(!box)return;
+
+  box.querySelectorAll(".research-tab").forEach(b=>{
+    b.classList.toggle(
+      "active",
+      b.dataset.face==="true"
+    );
+  });
+
+  box.querySelectorAll(".tab-content").forEach(c=>{
+    c.classList.toggle(
+      "active",
+      c.dataset.face==="true"
+    );
+  });
+
+  if(box._faceEditor){
+    box._faceEditor.activate();
+
+    if(record && !historyChanging){
+      registerFaceHistory(box);
+    }
+
+    box._faceEditor.draw();
+    box._faceEditor.updateStatus();
+  }
+
+  updateHistoryDisplays();
+}
+
+/* =========================================================
+   OPEN / CLOSE / CLEAR
+========================================================= */
+document.getElementById("openAll").onclick=()=>{
+  boxes.forEach(box=>{
+    box.classList.add("open");
+    const c=box.querySelector(".collapse");
+    if(c)c.textContent="−";
+  });
+};
+
+document.getElementById("closeAll").onclick=()=>{
+  boxes.forEach(box=>{
+    box.classList.remove("open");
+    const c=box.querySelector(".collapse");
+    if(c)c.textContent="+";
+  });
+};
+
+document.getElementById("clearAll").onclick=()=>{
+  boxes.length=0;
+  faceHistory.length=0;
+  faceHistoryIndex=-1;
+  historyChanging=false;
+
+  document.querySelectorAll(".research-box").forEach(b=>b.remove());
+  document.querySelectorAll(".word").forEach(w=>{
+    delete w._researchBox;
+    w.classList.remove("face-origin-highlight");
+  });
+
+  rootParagraphs.innerHTML="";
+  updateSelection("");
+  updateHistoryDisplays();
+};
+
+/* =========================================================
+   GLOBAL FACE HISTORY KEYBOARD SUPPORT
+========================================================= */
+document.addEventListener("keydown",e=>{
+  if(!(e.altKey||e.ctrlKey||e.metaKey))return;
+
+  if(e.key==="ArrowLeft"){
+    e.preventDefault();
+    navigateFaceHistory(-1);
+  }
+
+  if(e.key==="ArrowRight"){
+    e.preventDefault();
+    navigateFaceHistory(1);
+  }
+});
+
+updateHistoryDisplays();
+</script>
+
+</body>
+</html>

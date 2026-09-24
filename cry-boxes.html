@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local Retailer Tracking Board</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#070a10;
+  color:#eaf2ff;
+}
+
+#topbar{
+  position:fixed;
+  z-index:100;
+  top:0;
+  left:0;
+  right:0;
+  height:64px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 15px;
+  background:rgba(8,12,20,.96);
+  border-bottom:1px solid #263246;
+}
+
+#topbar h1{
+  margin:0 18px 0 0;
+  font-size:18px;
+  white-space:nowrap;
+}
+
+button{
+  border:1px solid #33445d;
+  background:#111a29;
+  color:#dce9fa;
+  padding:8px 12px;
+  border-radius:7px;
+  cursor:pointer;
+}
+
+button:hover{
+  background:#1b2a40;
+}
+
+#board{
+  position:absolute;
+  top:64px;
+  left:0;
+  right:0;
+  bottom:0;
+  overflow:hidden;
+  background:
+    linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+
+#hint{
+  position:absolute;
+  bottom:15px;
+  left:50%;
+  transform:translateX(-50%);
+  padding:8px 14px;
+  border:1px solid #29364b;
+  border-radius:20px;
+  background:rgba(7,10,16,.85);
+  color:#8290a5;
+  font-size:12px;
+  pointer-events:none;
+}
+
+/* RETAILER BOX */
+
+.card{
+  position:absolute;
+  width:245px;
+  min-height:205px;
+  padding:0 12px 12px;
+  border:1px solid #33435c;
+  border-radius:12px;
+  background:rgba(13,19,30,.97);
+  box-shadow:0 15px 35px rgba(0,0,0,.35);
+  user-select:none;
+}
+
+.card.selected{
+  border-color:#63baff;
+  box-shadow:0 0 0 1px #63baff,0 18px 45px rgba(0,0,0,.5);
+}
+
+.cardHeader{
+  height:38px;
+  margin:0 -12px 10px;
+  padding:0 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid #29364b;
+  border-radius:12px 12px 0 0;
+  cursor:grab;
+  background:#101927;
+}
+
+.cardHeader:active{
+  cursor:grabbing;
+}
+
+.cardTitle{
+  font-weight:bold;
+  font-size:13px;
+}
+
+.close{
+  width:24px;
+  height:24px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#7e8ba0;
+}
+
+.close:hover{
+  color:white;
+}
+
+.field{
+  margin:7px 0;
+}
+
+.field label{
+  display:block;
+  margin-bottom:3px;
+  color:#718096;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+
+.field input,
+.field select,
+.field textarea{
+  width:100%;
+  border:1px solid #29374d;
+  border-radius:5px;
+  padding:7px;
+  outline:none;
+  color:#e8f1fc;
+  background:#080d15;
+  font-family:inherit;
+  font-size:12px;
+  user-select:text;
+}
+
+.field textarea{
+  height:52px;
+  resize:none;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus{
+  border-color:#4b9ed8;
+}
+
+.status{
+  display:inline-block;
+  margin-top:3px;
+  padding:4px 7px;
+  border-radius:10px;
+  font-size:10px;
+  background:#162338;
+  color:#91caff;
+}
+
+/* BLUE CATEGORY HEADERS */
+.card[data-type="retailer"] .cardHeader,
+.card[data-type="signal"] .cardHeader,
+.card[data-type="contact"] .cardHeader,
+.card[data-type="season"] .cardHeader,
+.card[data-type="followup"] .cardHeader,
+.card[data-type="product"] .cardHeader{
+  background:#101f33;
+}
+
+
+/* FACES PANEL */
+.faces{
+  margin:10px 0 8px;
+  padding:8px;
+  border:1px solid #29374d;
+  border-radius:8px;
+  background:#080d15;
+}
+.facesTitle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:6px;
+  color:#91caff;
+  font-size:10px;
+  font-weight:bold;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+}
+.faceCanvas{
+  display:block;
+  width:100%;
+  height:135px;
+  border:1px solid #25344a;
+  border-radius:6px;
+  background:#050810;
+  cursor:grab;
+  touch-action:none;
+}
+.faceCanvas.dragging{cursor:grabbing}
+.faceControls{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:5px;
+  margin-top:6px;
+}
+.faceControls label{
+  margin:0;
+  color:#718096;
+  font-size:8px;
+  text-transform:uppercase;
+}
+.faceControls input{
+  width:100%;
+  margin-top:2px;
+  accent-color:#55b8ff;
+}
+.faceReset{
+  width:100%;
+  margin-top:6px;
+  padding:5px 7px;
+  font-size:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="topbar">
+  <h1>Retailer Tracking Board</h1>
+
+<button onclick="addCard('retailer')">+ Retailer</button>
+  <button onclick="addCard('contact')">+ Contact</button>
+  <button onclick="addCard('signal')">+ Buying Signal</button>
+  <button onclick="addCard('season')">+ Season</button>
+  <button onclick="addCard('followup')">+ Follow-Up</button>
+  <button onclick="addCard('product')">+ Product</button>
+  <button id="duplicateButton" type="button">Duplicate</button>
+  <button id="saveButton" type="button">Save</button>
+  <button id="clearButton" type="button">Clear</button>
+
+</div>
+
+<div id="board"></div>
+
+<div id="hint">
+  Drag the top of any box • Edit the fields • Drag the face points • Shift-drag for depth • Alt-drag to rotate
+</div>
+
+
+<script>
+const board = document.getElementById("board");
+
+let cards = [];
+let selected = null;
+let cardCounter = 0;
+
+const templates = {
+  retailer: {
+    title: "Local Retailer",
+    fields: [
+      ["Retailer", "Example Store"],
+      ["Category", "Clothing"],
+      ["Location", ""],
+      ["Website", ""],
+      ["Buying Cycle", ""],
+      ["Status", "Prospect"]
+    ]
+  },
+  contact: {
+    title: "Buyer / Owner",
+    fields: [
+      ["Name", ""],
+      ["Role", "Owner / Buyer"],
+      ["Email", ""],
+      ["Phone", ""],
+      ["Last Contact", ""],
+      ["Next Contact", ""]
+    ]
+  },
+  signal: {
+    title: "Buying Signal",
+    fields: [
+      ["Signal", "New Fall Arrivals"],
+      ["Observed", ""],
+      ["Source", "Instagram / Website"],
+      ["Meaning", "Possible buying period"],
+      ["Action", "Contact retailer"]
+    ]
+  },
+  season: {
+    title: "Retail Season",
+    fields: [
+      ["Season", "Fall 2026"],
+      ["Buying Window", ""],
+      ["Decision Window", ""],
+      ["Delivery Window", ""],
+      ["Notes", ""]
+    ]
+  },
+  followup: {
+    title: "Follow-Up",
+    fields: [
+      ["Contact Date", ""],
+      ["Next Date", ""],
+      ["Method", "Email / DM / Call"],
+      ["Purpose", "Check assortment"],
+      ["Result", ""]
+    ]
+  },
+  product: {
+    title: "Product",
+    fields: [
+      ["Product", "Hat"],
+      ["Wholesale", "$"],
+      ["Retail Price", "$"],
+      ["Minimum Order", ""],
+      ["Lead Time", ""],
+      ["Status", "Ready"]
+    ]
+  }
+};
+
+function addCard(type, x, y, values, faceState) {
+  const template = templates[type];
+  if (!template) return;
+
+  const card = document.createElement("div");
+  card.className = "card";
+  card.dataset.type = type;
+  card.dataset.id = ++cardCounter;
+
+  card.style.left = (x ?? (30 + (cardCounter % 5) * 270)) + "px";
+  card.style.top = (y ?? (30 + Math.floor((cardCounter - 1) / 5) * 300)) + "px";
+
+  const header = document.createElement("div");
+  header.className = "cardHeader";
+
+  const title = document.createElement("span");
+  title.className = "cardTitle";
+  title.textContent = template.title;
+
+  const close = document.createElement("button");
+  close.className = "close";
+  close.type = "button";
+  close.textContent = "×";
+  close.title = "Delete box";
+
+  header.appendChild(title);
+  header.appendChild(close);
+  card.appendChild(header);
+
+  template.fields.forEach((field, index) => {
+    const wrap = document.createElement("div");
+    wrap.className = "field";
+
+    const label = document.createElement("label");
+    label.textContent = field[0];
+
+    const longField = /notes|result|meaning/i.test(field[0]);
+    const input = longField ? document.createElement("textarea") : document.createElement("input");
+
+    input.value = values && values[index] !== undefined ? values[index] : field[1];
+    input.dataset.field = field[0];
+
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    card.appendChild(wrap);
+  });
+
+  /* Faces: one compact interactive face editor inside every box. */
+  const faces = createFacePanel(faceState);
+  card.appendChild(faces.element);
+  card._face = faces;
+
+  const status = document.createElement("span");
+  status.className = "status";
+  status.textContent = type;
+  card.appendChild(status);
+
+  board.appendChild(card);
+  cards.push(card);
+
+  close.addEventListener("click", event => {
+    event.stopPropagation();
+    removeCard(card);
+  });
+
+  card.addEventListener("mousedown", () => selectCard(card));
+
+  makeDraggable(card);
+  selectCard(card);
+}
+
+function createFacePanel(saved) {
+  const element = document.createElement("div");
+  element.className = "faces";
+
+  const title = document.createElement("div");
+  title.className = "facesTitle";
+  title.innerHTML = '<span>Faces</span><span>3D</span>';
+  element.appendChild(title);
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "faceCanvas";
+  canvas.width = 440;
+  canvas.height = 270;
+  element.appendChild(canvas);
+
+  const controls = document.createElement("div");
+  controls.className = "faceControls";
+
+  const makeControl = (labelText, min, max, value) => {
+    const wrap = document.createElement("label");
+    wrap.textContent = labelText;
+    const input = document.createElement("input");
+    input.type = "range";
+    input.min = min;
+    input.max = max;
+    input.value = value;
+    wrap.appendChild(input);
+    controls.appendChild(wrap);
+    return input;
+  };
+
+  const rx = makeControl("X", -90, 90, saved?.rx ?? 0);
+  const ry = makeControl("Y", -90, 90, saved?.ry ?? 0);
+  const rz = makeControl("Z", -180, 180, saved?.rz ?? 0);
+  element.appendChild(controls);
+
+  const reset = document.createElement("button");
+  reset.type = "button";
+  reset.className = "faceReset";
+  reset.textContent = "Reset Face";
+  element.appendChild(reset);
+
+  const ctx = canvas.getContext("2d");
+  const N = 9;
+  const W = canvas.width;
+  const H = canvas.height;
+  const HEAD_WIDTH = 2.55;
+  const HEAD_HEIGHT = 3.0;
+  let vertices = [];
+  let selected = -1;
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+  let dragMode = "point";
+
+  function build() {
+    vertices = [];
+    for (let j=0;j<N;j++) {
+      for (let i=0;i<N;i++) {
+        let u = i/(N-1)*2-1;
+        let v = j/(N-1)*2-1;
+        const d = Math.hypot(u,v);
+        if (d>1) { u/=d; v/=d; }
+        vertices.push({x:u*HEAD_WIDTH,y:v*HEAD_HEIGHT,z:0});
+      }
+    }
+    if (saved?.vertices && saved.vertices.length === vertices.length) {
+      vertices = saved.vertices.map(v => ({x:v.x,y:v.y,z:v.z}));
+    }
+  }
+
+  function rotate(p) {
+    let x=p.x,y=p.y,z=p.z;
+    const ax=Number(rx.value)*Math.PI/180;
+    const ay=Number(ry.value)*Math.PI/180;
+    const az=Number(rz.value)*Math.PI/180;
+    let c=Math.cos(ax),s=Math.sin(ax), yy=y*c-z*s, zz=y*s+z*c; y=yy;z=zz;
+    c=Math.cos(ay);s=Math.sin(ay); let xx=x*c+z*s; zz=-x*s+z*c; x=xx;z=zz;
+    c=Math.cos(az);s=Math.sin(az); xx=x*c-y*s; yy=x*s+y*c; x=xx;y=yy;
+    return {x,y,z};
+  }
+
+  function project(p) {
+    const r=rotate(p), camera=18;
+    const scale=camera/(camera+r.z);
+    return {x:W/2+r.x*58*scale,y:H/2-r.y*38*scale,z:r.z};
+  }
+
+  function draw() {
+    ctx.fillStyle="#050810";
+    ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle="#101722";
+    ctx.lineWidth=1;
+    for(let x=0;x<W;x+=35){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=35){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+    const sp=vertices.map(project);
+    for(let j=0;j<N-1;j++){
+      for(let i=0;i<N-1;i++){
+        const a=sp[j*N+i],b=sp[j*N+i+1],c=sp[(j+1)*N+i+1],d=sp[(j+1)*N+i];
+        const depth=(a.z+b.z+c.z+d.z)/4;
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.lineTo(d.x,d.y);ctx.closePath();
+        ctx.fillStyle=`rgba(35,150,220,${Math.max(.08,Math.min(.30,.18-depth*.008))})`;ctx.fill();
+      }
+    }
+    ctx.strokeStyle="rgba(85,195,255,.68)";
+    for(let j=0;j<N;j++) for(let i=0;i<N-1;i++) {const a=sp[j*N+i],b=sp[j*N+i+1];ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+    for(let j=0;j<N-1;j++) for(let i=0;i<N;i++) {const a=sp[j*N+i],b=sp[(j+1)*N+i];ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();}
+
+    sp.forEach((p,i)=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,i===selected?5:3,0,Math.PI*2);
+      ctx.fillStyle=i===selected?"#fff":"#38aaff";ctx.fill();
+      ctx.strokeStyle="#fff";ctx.lineWidth=1;ctx.stroke();
+    });
+
+    /* small polygon neck */
+    const neck=[{x:-.9,y:-2.75,z:.35},{x:.9,y:-2.75,z:.35},{x:.75,y:-4.7,z:.35},{x:-.75,y:-4.7,z:.35}].map(project);
+    ctx.beginPath();ctx.moveTo(neck[0].x,neck[0].y);neck.slice(1).forEach(p=>ctx.lineTo(p.x,p.y));ctx.closePath();
+    ctx.fillStyle="rgba(30,105,137,.9)";ctx.fill();ctx.strokeStyle="rgba(100,205,245,.75)";ctx.stroke();
+  }
+
+  function nearest(mx,my){
+    const sp=vertices.map(project);let best=-1,dist=14;
+    sp.forEach((p,i)=>{const d=Math.hypot(mx-p.x,my-p.y);if(d<dist){dist=d;best=i;}});
+    return best;
+  }
+
+  function movePoint(dx,dy) {
+    const scale=.018;
+    const a=Number(rz.value)*Math.PI/180;
+    const wx=dx*Math.cos(a)+dy*Math.sin(a);
+    const wy=-dx*Math.sin(a)+dy*Math.cos(a);
+    const v=vertices[selected];
+    let x=v.x+wx*scale, y=v.y-wy*scale;
+    const n=Math.sqrt((x*x)/(HEAD_WIDTH*HEAD_WIDTH)+(y*y)/(HEAD_HEIGHT*HEAD_HEIGHT));
+    if(n>1){x/=n;y/=n;}
+    v.x=x;v.y=y;
+  }
+
+  canvas.addEventListener("pointerdown",e=>{
+    const r=canvas.getBoundingClientRect(),mx=(e.clientX-r.left)*(canvas.width/r.width),my=(e.clientY-r.top)*(canvas.height/r.height);
+    if(e.altKey){dragMode="view";dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.classList.add("dragging");canvas.setPointerCapture(e.pointerId);return;}
+    const i=nearest(mx,my);if(i<0)return;
+    selected=i;dragging=true;dragMode=e.shiftKey?"z":"point";lastX=e.clientX;lastY=e.clientY;canvas.classList.add("dragging");canvas.setPointerCapture(e.pointerId);draw();e.preventDefault();
+  });
+
+  canvas.addEventListener("pointermove",e=>{
+    if(!dragging)return;
+    const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;
+    if(dragMode==="view"){
+      ry.value=Math.max(-90,Math.min(90,Number(ry.value)+dx*.35));
+      rx.value=Math.max(-90,Math.min(90,Number(rx.value)+dy*.35));
+    }else if(dragMode==="z"){
+      vertices[selected].z-=dy*.025;
+    }else{movePoint(dx,dy);}
+    draw();
+  });
+
+  const stop=e=>{dragging=false;canvas.classList.remove("dragging");try{canvas.releasePointerCapture(e.pointerId)}catch(_){} };
+  canvas.addEventListener("pointerup",stop);canvas.addEventListener("pointercancel",stop);
+  [rx,ry,rz].forEach(s=>s.addEventListener("input",draw));
+  reset.addEventListener("click",()=>{rx.value=0;ry.value=0;rz.value=0;build();selected=-1;draw();});
+
+  build();draw();
+
+  return {
+    element,
+    getState(){return {rx:Number(rx.value),ry:Number(ry.value),rz:Number(rz.value),vertices:vertices.map(v=>({x:v.x,y:v.y,z:v.z}))}}
+  };
+}
+
+function selectCard(card) {
+  cards.forEach(item => item.classList.remove("selected"));
+  selected = card || null;
+
+  if (selected) {
+    selected.classList.add("selected");
+    selected.style.zIndex = ++cardCounter;
+  }
+}
+
+function makeDraggable(card) {
+  const header = card.querySelector(".cardHeader");
+
+  let dragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  header.addEventListener("pointerdown", event => {
+    if (event.target.closest(".close")) return;
+
+    dragging = true;
+    selectCard(card);
+
+    const rect = card.getBoundingClientRect();
+    const boardRect = board.getBoundingClientRect();
+
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
+
+    header.setPointerCapture(event.pointerId);
+    event.preventDefault();
+
+    card.dataset.boardLeft = boardRect.left;
+    card.dataset.boardTop = boardRect.top;
+  });
+
+  header.addEventListener("pointermove", event => {
+    if (!dragging) return;
+
+    const boardRect = board.getBoundingClientRect();
+
+    let x = event.clientX - boardRect.left - offsetX;
+    let y = event.clientY - boardRect.top - offsetY;
+
+    x = Math.max(0, Math.min(board.clientWidth - card.offsetWidth, x));
+    y = Math.max(0, Math.min(board.clientHeight - card.offsetHeight, y));
+
+    card.style.left = x + "px";
+    card.style.top = y + "px";
+  });
+
+  const stopDragging = event => {
+    if (!dragging) return;
+    dragging = false;
+
+    try {
+      header.releasePointerCapture(event.pointerId);
+    } catch (_) {}
+  };
+
+  header.addEventListener("pointerup", stopDragging);
+  header.addEventListener("pointercancel", stopDragging);
+}
+
+function removeCard(card) {
+  cards = cards.filter(item => item !== card);
+  card.remove();
+
+  if (selected === card) selected = null;
+}
+
+function duplicateSelected() {
+  if (!selected) return;
+
+  const values = [...selected.querySelectorAll(".field input, .field textarea")]
+    .map(input => input.value);
+
+  const x = parseInt(selected.style.left, 10) + 30;
+  const y = parseInt(selected.style.top, 10) + 30;
+  const face = selected._face ? selected._face.getState() : null;
+
+  addCard(selected.dataset.type, x, y, values, face);
+}
+
+function deleteSelected() {
+  if (selected) removeCard(selected);
+}
+
+function saveBoard() {
+  const data = cards.map(card => ({
+    type: card.dataset.type,
+    x: parseInt(card.style.left, 10) || 0,
+    y: parseInt(card.style.top, 10) || 0,
+    values: [...card.querySelectorAll(".field input, .field textarea")]
+      .map(input => input.value),
+    face: card._face ? card._face.getState() : null
+  }));
+
+  localStorage.setItem("retailerTrackingBoard", JSON.stringify(data));
+
+  const button = document.getElementById("saveButton");
+  const oldText = button.textContent;
+  button.textContent = "Saved";
+
+  setTimeout(() => {
+    button.textContent = oldText;
+  }, 1000);
+}
+
+function loadBoard() {
+  const raw = localStorage.getItem("retailerTrackingBoard");
+
+  if (!raw) return false;
+
+  try {
+    const data = JSON.parse(raw);
+
+    data.forEach(item => {
+      addCard(
+        item.type,
+        item.x,
+        item.y,
+        item.values,
+        item.face
+      );
+    });
+
+    return true;
+  } catch (error) {
+    console.error("Could not load retailer board:", error);
+    return false;
+  }
+}
+
+function clearBoard() {
+  if (!confirm("Clear the entire retailer board?")) return;
+
+  cards.forEach(card => card.remove());
+  cards = [];
+  selected = null;
+
+  localStorage.removeItem("retailerTrackingBoard");
+}
+
+document.getElementById("saveButton").addEventListener("click", saveBoard);
+document.getElementById("clearButton").addEventListener("click", clearBoard);
+
+document.getElementById("duplicateButton").addEventListener(
+  "click",
+  duplicateSelected
+);
+
+document.addEventListener("keydown", event => {
+  if (event.key === "Delete" && selected) {
+    const active = document.activeElement;
+    const editing =
+      active &&
+      (active.tagName === "INPUT" ||
+       active.tagName === "TEXTAREA");
+
+    if (!editing) deleteSelected();
+  }
+
+  if (event.key === "Escape") {
+    selectCard(null);
+  }
+});
+
+const loaded = loadBoard();
+
+if (!loaded) {
+  addCard("retailer", 30, 30);
+  addCard("contact", 300, 55);
+  addCard("signal", 570, 30);
+  addCard("season", 840, 60);
+
+  addCard("product", 120, 340);
+  addCard("followup", 420, 365);
+  addCard("signal", 720, 340);
+  addCard("retailer", 990, 365);
+}
+</script>
+
+</body>
+</html>

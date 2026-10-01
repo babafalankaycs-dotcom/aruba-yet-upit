@@ -1,0 +1,3599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recursive Research Engine — Whiteboard + 3D Face</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  min-height:100%;
+  background:#070a0f;
+  color:#dce7f5;
+  font-family:Arial,Helvetica,sans-serif;
+}
+
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+
+#toolbar{
+  position:sticky;
+  top:0;
+  z-index:1000;
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  align-items:center;
+  padding:10px;
+  background:#0b111a;
+  border-bottom:1px solid #263447;
+}
+
+button{
+  background:#111b28;
+  color:#dce7f5;
+  border:1px solid #304158;
+  border-radius:6px;
+  padding:7px 11px;
+}
+
+button:hover{
+  background:#1a2a3d;
+}
+
+button:active{
+  transform:translateY(1px);
+}
+
+#workspace{
+  padding:18px 18px 70px;
+}
+
+#rootArea{
+  background:#0c121b;
+  border:1px solid #29384c;
+  border-radius:9px;
+  padding:12px;
+}
+
+#rootText{
+  width:100%;
+  min-height:130px;
+  resize:vertical;
+  background:#080d14;
+  color:#dbe8f7;
+  border:1px solid #29384c;
+  border-radius:7px;
+  padding:12px;
+  outline:none;
+  line-height:1.55;
+}
+
+#rootText:focus{
+  border-color:#4288c7;
+}
+
+.action-row{
+  display:flex;
+  gap:7px;
+  margin-top:8px;
+}
+
+.paragraph{
+  padding:10px;
+  margin:8px 0;
+  background:#090f17;
+  border:1px solid #202d3e;
+  border-radius:7px;
+  line-height:1.9;
+}
+
+.word{
+  display:inline-block;
+  padding:2px 4px;
+  margin:0 1px;
+  border-radius:4px;
+  cursor:pointer;
+  user-select:none;
+  transition:background .2s,box-shadow .2s;
+}
+
+.word-fizz{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  width:18px;
+  height:12px;
+  margin:0 3px;
+  vertical-align:middle;
+  pointer-events:none;
+  user-select:none;
+  opacity:.9;
+}
+
+.word-fizz i{
+  display:block;
+  width:3px;
+  height:3px;
+  border-radius:50%;
+  background:#65bfff;
+  box-shadow:0 0 6px #65bfff;
+  animation:fizzRise 1.1s ease-in-out infinite;
+}
+
+.word-fizz i:nth-child(2){
+  width:4px;
+  height:4px;
+  animation-delay:.18s;
+}
+
+.word-fizz i:nth-child(3){
+  width:2px;
+  height:2px;
+  animation-delay:.36s;
+}
+
+@keyframes fizzRise{
+  0%,100%{
+    transform:translateY(3px) scale(.7);
+    opacity:.35;
+  }
+  50%{
+    transform:translateY(-3px) scale(1);
+    opacity:1;
+  }
+}
+
+.word:hover{
+  background:#17304a;
+  color:#71c8ff;
+}
+
+.word.active-word{
+  background:#245d86;
+  color:white;
+  box-shadow:0 0 0 2px #65bfff,0 0 18px #65bfff88;
+}
+
+.word.locator-target{
+  animation:locatorPulse 1.6s ease;
+}
+
+@keyframes locatorPulse{
+  0%{
+    background:#65bfff;
+    color:#fff;
+    box-shadow:0 0 0 4px #65bfff,0 0 35px #65bfff;
+  }
+  100%{
+    background:#245d86;
+    color:#fff;
+    box-shadow:0 0 0 2px #65bfff,0 0 18px #65bfff88;
+  }
+}
+
+#pathbar{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:1000;
+  padding:8px 12px;
+  background:#0b111a;
+  border-top:1px solid #263447;
+  color:#65bfff;
+  font-size:12px;
+}
+
+/* RESEARCH */
+
+.research-box{
+  margin:12px 0 12px 22px;
+  border:1px solid #304158;
+  border-radius:9px;
+  background:#0b1119;
+  overflow:hidden;
+}
+
+.research-head{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  background:#0f1824;
+  border-bottom:1px solid #29384c;
+}
+
+.research-label{
+  flex:1;
+  min-width:0;
+  color:#7ec9ff;
+  font-weight:bold;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.collapse-btn{
+  padding:4px 9px;
+}
+
+.research-body{
+  padding:9px;
+}
+
+.research-box.closed>.research-body{
+  display:none;
+}
+
+.research-tabs{
+  display:flex;
+  gap:4px;
+  overflow-x:auto;
+  padding-bottom:6px;
+  border-bottom:1px solid #29384c;
+}
+
+.research-tab{
+  flex:0 0 auto;
+  padding:7px 10px;
+  font-size:11px;
+}
+
+.research-tab.active{
+  background:#17304a;
+  border-color:#58baff;
+  color:white;
+}
+
+/* LOCATOR */
+
+.research-locator{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+  padding:7px 0;
+  border-bottom:1px solid #1e2b3b;
+}
+
+.locator-btn{
+  padding:5px 8px;
+  font-size:10px;
+}
+
+.locator-btn.origin{
+  color:#8bd2ff;
+  border-color:#3c7195;
+}
+
+.locator-btn.parent{
+  color:#b8c9d9;
+}
+
+.locator-btn.root{
+  color:#c7a9ff;
+  border-color:#604f82;
+}
+
+.locator-path{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:3px;
+  min-width:0;
+  margin-left:2px;
+  font-size:10px;
+  color:#71869b;
+}
+
+.locator-crumb{
+  padding:3px 5px;
+  border:0;
+  background:transparent;
+  color:#65bfff;
+  font-size:10px;
+  border-radius:4px;
+}
+
+.locator-crumb:hover{
+  background:#17304a;
+}
+
+.locator-arrow{
+  color:#506276;
+}
+
+.tab-content{
+  display:none;
+  padding-top:9px;
+}
+
+.tab-content.active{
+  display:block;
+}
+
+.tab-editor{
+  min-height:120px;
+  padding:10px;
+  background:#080d14;
+  border:1px solid #263447;
+  border-radius:7px;
+  outline:none;
+  line-height:1.5;
+}
+
+.level-grid{
+  display:grid;
+  grid-template-columns:100px 1fr;
+  gap:7px;
+  font-size:12px;
+}
+
+.level-grid b{
+  color:#fff;
+}
+
+/* WHITEBOARD */
+
+.whiteboard{
+  width:100%;
+  height:650px;
+  background:#080d14;
+  border:1px solid #3b526b;
+  border-radius:8px;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+.wb-toolbar{
+  flex:none;
+  display:flex;
+  gap:4px;
+  flex-wrap:wrap;
+  align-items:center;
+  padding:8px;
+  background:#101a27;
+  border-bottom:1px solid #304158;
+}
+
+.wb-toolbar button{
+  padding:6px 9px;
+  font-size:11px;
+}
+
+.wb-toolbar button.active-tool{
+  background:#245274;
+  border-color:#65bfff;
+  color:#fff;
+}
+
+.wb-title{
+  flex:none;
+  padding:7px 10px;
+  background:#0a111a;
+  border-bottom:1px solid #263447;
+  font-size:11px;
+  color:#79b9df;
+  font-weight:bold;
+}
+
+.wb-stage{
+  position:relative;
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+  background-color:#080d14;
+  background-image:
+    linear-gradient(#111c28 1px,transparent 1px),
+    linear-gradient(90deg,#111c28 1px,transparent 1px);
+  background-size:25px 25px;
+}
+
+.wb-canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+  touch-action:none;
+  z-index:1;
+}
+
+.wb-elements{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+}
+
+.wb-element{
+  position:absolute;
+  pointer-events:auto;
+}
+
+.wb-text{
+  color:#fff;
+  font-size:18px;
+  padding:5px;
+  cursor:move;
+}
+
+.wb-note{
+  width:160px;
+  min-height:90px;
+  padding:10px;
+  background:#172333;
+  border:1px solid #58738e;
+  border-radius:5px;
+  color:#fff;
+  cursor:move;
+  outline:none;
+}
+
+.wb-image{
+  max-width:220px;
+  max-height:180px;
+  cursor:move;
+}
+
+.wb-selected{
+  outline:2px solid #65bfff;
+  outline-offset:2px;
+}
+
+.wb-status{
+  position:absolute;
+  left:8px;
+  bottom:8px;
+  z-index:5;
+  padding:6px 8px;
+  background:#0a111add;
+  border:1px solid #304158;
+  border-radius:5px;
+  color:#83a5bf;
+  font-size:10px;
+  pointer-events:none;
+}
+
+/* FACE */
+
+.face-wrap{
+  width:100%;
+  height:650px;
+  background:#080d14;
+  border:1px solid #263447;
+  border-radius:8px;
+  overflow:hidden;
+}
+
+.face-title{
+  padding:8px 10px;
+  border-bottom:1px solid #263447;
+  color:#79b9df;
+  font-size:11px;
+}
+
+.face-area{
+  position:relative;
+  height:600px;
+}
+
+.face-canvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+.face-panel{
+  position:absolute;
+  right:8px;
+  top:8px;
+  width:190px;
+  padding:8px;
+  background:#080d14ed;
+  border:1px solid #304158;
+  border-radius:7px;
+  font-size:10px;
+}
+
+.face-panel label{
+  display:block;
+  margin:7px 0;
+  color:#8298af;
+}
+
+.face-panel input[type=range]{
+  width:100%;
+}
+
+.face-status{
+  position:absolute;
+  left:8px;
+  bottom:8px;
+  padding:6px;
+  background:#080d14e8;
+  border:1px solid #263447;
+  border-radius:6px;
+  color:#7fa0bc;
+  font-size:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="toolbar">
+  <button type="button" id="openAllBtn">Open All</button>
+  <button type="button" id="closeAllBtn">Close All</button>
+  <button type="button" id="clearAllBtn">Clear All</button>
+
+  <span style="color:#53677e;font-size:11px">
+    Recursive Research Depth Engine
+  </span>
+</div>
+
+<main id="workspace">
+
+  <section id="rootArea">
+
+    <textarea
+      id="rootText"
+      placeholder="Put your research text here. Every word becomes clickable."
+    ></textarea>
+
+    <div class="action-row">
+      <button type="button" id="addRootBtn">
+        Add Paragraph
+      </button>
+    </div>
+
+    <div id="rootParagraphs"></div>
+
+  </section>
+
+</main>
+
+<div id="pathbar">Selected path: —</div>
+
+<script>
+"use strict";
+
+/* =====================================================
+   MAIN STATE
+===================================================== */
+
+const rootText =
+  document.getElementById("rootText");
+
+const rootParagraphs =
+  document.getElementById("rootParagraphs");
+
+const workspace =
+  document.getElementById("workspace");
+
+const pathbar =
+  document.getElementById("pathbar");
+
+const researchBoxes=[];
+
+
+/* =====================================================
+   CLICKABLE WORDS
+===================================================== */
+
+function makeWords(text,ownerBox){
+
+  const fragment=
+    document.createDocumentFragment();
+
+  let wordCount=0;
+
+  text.split(/(\s+)/).forEach(function(part){
+
+    if(!part.trim()){
+      return;
+    }
+
+    const clean=
+      part.replace(
+        /[.,!?;:()[\]{}"'“”‘’]/g,
+        ""
+      );
+
+    if(!clean){
+      fragment.appendChild(
+        document.createTextNode(part)
+      );
+      return;
+    }
+
+    if(wordCount>0){
+      const fizz=
+        document.createElement("span");
+
+      fizz.className="word-fizz";
+      fizz.setAttribute("aria-hidden","true");
+      fizz.innerHTML="<i></i><i></i><i></i>";
+
+      fragment.appendChild(fizz);
+    }
+
+    const word=
+      document.createElement("span");
+
+    word.className="word";
+    word.textContent=clean;
+    word.dataset.raw=part;
+
+    word.addEventListener(
+      "click",
+      function(event){
+        event.preventDefault();
+        event.stopPropagation();
+
+        openWord(
+          word,
+          ownerBox
+        );
+      }
+    );
+
+    fragment.appendChild(word);
+    wordCount++;
+  });
+
+  return fragment;
+}
+
+
+function addParagraph(
+  container,
+  text,
+  ownerBox
+){
+
+  const paragraph=
+    document.createElement("div");
+
+  paragraph.className="paragraph";
+
+  paragraph.appendChild(
+    makeWords(
+      text,
+      ownerBox
+    )
+  );
+
+  container.appendChild(paragraph);
+}
+
+
+/* =====================================================
+   ROOT BUTTONS
+===================================================== */
+
+document
+  .getElementById("addRootBtn")
+  .addEventListener(
+    "click",
+    function(){
+
+      const text=
+        rootText.value.trim();
+
+      if(!text)return;
+
+      addParagraph(
+        rootParagraphs,
+        text,
+        null
+      );
+
+      rootText.value="";
+    }
+  );
+
+
+rootText.addEventListener(
+  "keydown",
+  function(event){
+
+    if(
+      (event.ctrlKey||event.metaKey)&&
+      event.key==="Enter"
+    ){
+
+      event.preventDefault();
+
+      document
+        .getElementById("addRootBtn")
+        .click();
+    }
+  }
+);
+
+
+/* =====================================================
+   RESEARCH PATH
+===================================================== */
+
+function getDepth(box){
+
+  let depth=1;
+
+  let parent=
+    box.parentElement
+      ?.closest(".research-box");
+
+  while(parent){
+
+    depth++;
+
+    parent=
+      parent.parentElement
+        ?.closest(".research-box");
+  }
+
+  return depth;
+}
+
+
+function getPath(box){
+
+  const path=[];
+  let current=box;
+
+  while(current){
+
+    if(current._ownerWord){
+
+      path.unshift(
+        current
+          ._ownerWord
+          .textContent
+          .trim()
+      );
+    }
+
+    current=
+      current.parentElement
+        ?.closest(".research-box");
+  }
+
+  return path.join(" → ");
+}
+
+
+function updatePath(box){
+
+  pathbar.textContent=
+    "Selected path: "+
+    (
+      box
+      ?getPath(box)
+      :"—"
+    );
+
+  if(box){
+    updateLocator(box);
+  }
+}
+
+
+/* =====================================================
+   LOCATOR
+===================================================== */
+
+/*
+  Locate the word that created this research box.
+*/
+function locateOrigin(box){
+
+  if(!box || !box._ownerWord)return;
+
+  const word=box._ownerWord;
+
+  word.classList.remove(
+    "locator-target"
+  );
+
+  /*
+    Force the animation to restart if
+    the user presses the button repeatedly.
+  */
+  void word.offsetWidth;
+
+  word.scrollIntoView({
+    behavior:"smooth",
+    block:"center",
+    inline:"nearest"
+  });
+
+  word.classList.add(
+    "locator-target"
+  );
+
+  word.classList.add(
+    "active-word"
+  );
+
+  updatePath(box);
+
+  window.setTimeout(
+    function(){
+      word.classList.remove(
+        "locator-target"
+      );
+    },
+    1700
+  );
+}
+
+
+/*
+  Locate the parent research word.
+*/
+function locateParent(box){
+
+  if(!box)return;
+
+  const parent=
+    box.parentElement
+      ?.closest(".research-box");
+
+  if(parent){
+
+    locateOrigin(parent);
+
+    activateTab(
+      parent,
+      0
+    );
+
+    parent.classList.remove(
+      "closed"
+    );
+
+    const collapse=
+      parent.querySelector(
+        ".collapse-btn"
+      );
+
+    if(collapse){
+      collapse.textContent="−";
+    }
+
+    updatePath(parent);
+
+    return;
+  }
+
+  /*
+    If there is no parent research box,
+    go to the root area.
+  */
+  locateRoot();
+}
+
+
+/*
+  Locate the root/top of the application.
+*/
+function locateRoot(){
+
+  const root=
+    document.getElementById(
+      "rootArea"
+    );
+
+  root.scrollIntoView({
+    behavior:"smooth",
+    block:"start"
+  });
+
+  pathbar.textContent=
+    "Selected path: Root";
+
+  /*
+    Remove old word highlights.
+  */
+  document
+    .querySelectorAll(".word.locator-target")
+    .forEach(function(word){
+      word.classList.remove(
+        "locator-target"
+      );
+    });
+}
+
+
+/*
+  Create a clickable breadcrumb path.
+*/
+function buildLocatorPath(box){
+
+  const items=[];
+
+  let current=box;
+
+  while(current){
+
+    if(current._ownerWord){
+
+      items.unshift({
+        box:current,
+        word:current._ownerWord
+      });
+    }
+
+    current=
+      current.parentElement
+        ?.closest(".research-box");
+  }
+
+  return items;
+}
+
+
+/*
+  Refresh the locator breadcrumb.
+*/
+function updateLocator(box){
+
+  if(!box || !box._locatorPath)return;
+
+  const pathElement=
+    box._locatorPath;
+
+  pathElement.innerHTML="";
+
+  const items=
+    buildLocatorPath(box);
+
+  /*
+    Root crumb.
+  */
+  const rootButton=
+    document.createElement("button");
+
+  rootButton.type="button";
+  rootButton.className="locator-crumb";
+  rootButton.textContent="Root";
+
+  rootButton.addEventListener(
+    "click",
+    function(event){
+      event.preventDefault();
+      event.stopPropagation();
+      locateRoot();
+    }
+  );
+
+  pathElement.appendChild(
+    rootButton
+  );
+
+  items.forEach(
+    function(item){
+
+      const arrow=
+        document.createElement("span");
+
+      arrow.className="locator-arrow";
+      arrow.textContent="→";
+
+      pathElement.appendChild(
+        arrow
+      );
+
+      const button=
+        document.createElement("button");
+
+      button.type="button";
+      button.className="locator-crumb";
+
+      button.textContent=
+        item.word.textContent.trim();
+
+      button.addEventListener(
+        "click",
+        function(event){
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          item.box.classList.remove(
+            "closed"
+          );
+
+          const collapse=
+            item.box.querySelector(
+              ".collapse-btn"
+            );
+
+          if(collapse){
+            collapse.textContent="−";
+          }
+
+          activateTab(
+            item.box,
+            0
+          );
+
+          locateOrigin(
+            item.box
+          );
+
+          updatePath(
+            item.box
+          );
+        }
+      );
+
+      pathElement.appendChild(
+        button
+      );
+    }
+  );
+}
+
+
+/*
+  Add the locator to every research box.
+*/
+function createResearchLocator(box){
+
+  const locator=
+    document.createElement("div");
+
+  locator.className=
+    "research-locator";
+
+  const originButton=
+    document.createElement("button");
+
+  originButton.type="button";
+  originButton.className=
+    "locator-btn origin";
+
+  originButton.textContent=
+    "↑ Locate Origin";
+
+  originButton.title=
+    "Return to the word that opened this research box";
+
+  originButton.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      locateOrigin(box);
+    }
+  );
+
+
+  const parentButton=
+    document.createElement("button");
+
+  parentButton.type="button";
+  parentButton.className=
+    "locator-btn parent";
+
+  parentButton.textContent=
+    "← Parent";
+
+  parentButton.title=
+    "Go back one recursive research level";
+
+  parentButton.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      locateParent(box);
+    }
+  );
+
+
+  const rootButton=
+    document.createElement("button");
+
+  rootButton.type="button";
+  rootButton.className=
+    "locator-btn root";
+
+  rootButton.textContent=
+    "↑ Root";
+
+  rootButton.title=
+    "Return to the top/root research area";
+
+  rootButton.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      locateRoot();
+    }
+  );
+
+
+  const path=
+    document.createElement("div");
+
+  path.className=
+    "locator-path";
+
+
+  locator.append(
+    originButton,
+    parentButton,
+    rootButton,
+    path
+  );
+
+
+  box._locator=locator;
+  box._locatorPath=path;
+
+  return locator;
+}
+
+
+/* =====================================================
+   OPEN WORD
+===================================================== */
+
+function openWord(
+  word,
+  parentBox
+){
+
+  if(word._researchBox){
+
+    const existing=
+      word._researchBox;
+
+    existing.classList.remove(
+      "closed"
+    );
+
+    const collapse=
+      existing.querySelector(
+        ".collapse-btn"
+      );
+
+    if(collapse){
+      collapse.textContent="−";
+    }
+
+    activateTab(
+      existing,
+      0
+    );
+
+    updatePath(existing);
+
+    existing.scrollIntoView({
+      behavior:"smooth",
+      block:"nearest"
+    });
+
+    return;
+  }
+
+
+  const box=
+    createResearchBox(
+      word,
+      parentBox
+    );
+
+  word._researchBox=box;
+
+  word.classList.add(
+    "active-word"
+  );
+
+  updatePath(box);
+
+  box.scrollIntoView({
+    behavior:"smooth",
+    block:"nearest"
+  });
+}
+
+
+/* =====================================================
+   CREATE RESEARCH BOX
+===================================================== */
+
+function createResearchBox(
+  ownerWord,
+  parentBox
+){
+
+  const box=
+    document.createElement("section");
+
+  box.className="research-box";
+
+  box._ownerWord=ownerWord;
+
+
+  if(parentBox){
+
+    parentBox
+      .querySelector(".research-body")
+      .appendChild(box);
+
+  }else{
+
+    workspace.appendChild(box);
+  }
+
+
+  researchBoxes.push(box);
+
+
+  const head=
+    document.createElement("div");
+
+  head.className="research-head";
+
+
+  const label=
+    document.createElement("div");
+
+  label.className="research-label";
+
+  label.textContent=
+    "Research: "+
+    ownerWord.textContent.trim();
+
+
+  const collapse=
+    document.createElement("button");
+
+  collapse.type="button";
+  collapse.className="collapse-btn";
+  collapse.textContent="−";
+
+
+  collapse.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const closed=
+        box.classList.toggle(
+          "closed"
+        );
+
+      collapse.textContent=
+        closed
+        ?"+"
+        :"−";
+    }
+  );
+
+
+  head.append(
+    label,
+    collapse
+  );
+
+
+  const body=
+    document.createElement("div");
+
+  body.className="research-body";
+
+
+  const tabs=
+    document.createElement("div");
+
+  tabs.className="research-tabs";
+
+
+  /*
+    Locator sits immediately underneath
+    the research tabs.
+  */
+  const locator=
+    createResearchLocator(box);
+
+
+  const contents=
+    document.createElement("div");
+
+
+  body.append(
+    tabs,
+    locator,
+    contents
+  );
+
+
+  box.append(
+    head,
+    body
+  );
+
+
+  box._tabs=tabs;
+  box._contents=contents;
+
+
+  const tabNames=[
+    "Context",
+    "Definition",
+    "History",
+    "How It Works",
+    "Examples",
+    "Sources",
+    "Level",
+    "Whiteboard",
+    "3D Face"
+  ];
+
+
+  tabNames.forEach(
+    function(name,index){
+
+      if(name==="Whiteboard"){
+
+        createWhiteboard(
+          box,
+          index
+        );
+
+      }else if(name==="3D Face"){
+
+        createFace(
+          box,
+          index
+        );
+
+      }else{
+
+        createNormalTab(
+          box,
+          name,
+          index
+        );
+      }
+    }
+  );
+
+
+  activateTab(
+    box,
+    0
+  );
+
+
+  updateLocator(box);
+
+  return box;
+}
+
+
+/* =====================================================
+   TAB ACTIVATION
+===================================================== */
+
+function activateTab(
+  box,
+  index
+){
+
+  box
+    .querySelectorAll(".research-tab")
+    .forEach(function(tab){
+
+      const isActive=
+        Number(tab.dataset.index)===index;
+
+      tab.classList.toggle(
+        "active",
+        isActive
+      );
+    });
+
+
+  box
+    .querySelectorAll(".tab-content")
+    .forEach(function(content){
+
+      const isActive=
+        Number(content.dataset.index)===index;
+
+      content.classList.toggle(
+        "active",
+        isActive
+      );
+    });
+
+
+  if(
+    index===box._whiteboardIndex &&
+    box._whiteboard
+  ){
+
+    requestAnimationFrame(
+      function(){
+        box._whiteboard.resize();
+      }
+    );
+  }
+
+
+  if(
+    index===box._faceIndex &&
+    box._face
+  ){
+
+    requestAnimationFrame(
+      function(){
+        box._face.resize();
+      }
+    );
+  }
+}
+
+
+/* =====================================================
+   NORMAL TABS
+===================================================== */
+
+function createNormalTab(
+  box,
+  title,
+  index
+){
+
+  const tab=
+    document.createElement("button");
+
+  tab.type="button";
+  tab.className="research-tab";
+  tab.dataset.index=index;
+  tab.textContent=title;
+
+
+  const content=
+    document.createElement("div");
+
+  content.className="tab-content";
+  content.dataset.index=index;
+
+
+  if(title==="Level"){
+
+    const grid=
+      document.createElement("div");
+
+    grid.className="level-grid";
+
+
+    const rows=[
+      [
+        "Level",
+        function(){
+          return getDepth(box);
+        }
+      ],
+      [
+        "Current",
+        function(){
+          return box._ownerWord.textContent.trim();
+        }
+      ],
+      [
+        "Parent",
+        function(){
+
+          return box.parentElement
+            ?.closest(".research-box")
+            ?._ownerWord
+            ?.textContent
+            ?.trim()
+            ||"Root";
+        }
+      ],
+      [
+        "Path",
+        function(){
+          return getPath(box);
+        }
+      ]
+    ];
+
+
+    rows.forEach(
+      function(row){
+
+        const label=
+          document.createElement("span");
+
+        const value=
+          document.createElement("b");
+
+        label.textContent=row[0];
+        value.textContent=row[1]();
+
+        grid.append(
+          label,
+          value
+        );
+      }
+    );
+
+
+    content.appendChild(grid);
+
+  }else{
+
+    const editor=
+      document.createElement("div");
+
+    editor.className="tab-editor";
+    editor.contentEditable="true";
+    editor.spellcheck=false;
+
+
+    const add=
+      document.createElement("button");
+
+    add.type="button";
+    add.textContent="Add Paragraph";
+    add.style.marginTop="7px";
+
+
+    function addEditorParagraph(){
+
+      const text=
+        editor.innerText.trim();
+
+      if(!text)return;
+
+
+      const paragraph=
+        document.createElement("div");
+
+      paragraph.className="paragraph";
+
+      paragraph.appendChild(
+        makeWords(
+          text,
+          box
+        )
+      );
+
+
+      content.insertBefore(
+        paragraph,
+        add
+      );
+
+
+      editor.textContent="";
+    }
+
+
+    add.addEventListener(
+      "click",
+      function(event){
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        addEditorParagraph();
+      }
+    );
+
+
+    editor.addEventListener(
+      "keydown",
+      function(event){
+
+        if(
+          (event.ctrlKey||event.metaKey)&&
+          event.key==="Enter"
+        ){
+
+          event.preventDefault();
+
+          addEditorParagraph();
+        }
+      }
+    );
+
+
+    content.append(
+      editor,
+      add
+    );
+  }
+
+
+  tab.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      activateTab(
+        box,
+        index
+      );
+    }
+  );
+
+
+  box._tabs.appendChild(tab);
+  box._contents.appendChild(content);
+}
+
+
+/* =====================================================
+   WHITEBOARD
+===================================================== */
+
+function createWhiteboard(
+  box,
+  index
+){
+
+  box._whiteboardIndex=index;
+
+
+  const tab=
+    document.createElement("button");
+
+  tab.type="button";
+  tab.className="research-tab";
+  tab.dataset.index=index;
+  tab.textContent="Whiteboard";
+
+
+  const content=
+    document.createElement("div");
+
+  content.className="tab-content";
+  content.dataset.index=index;
+
+
+  const board=
+    document.createElement("div");
+
+  board.className="whiteboard";
+
+
+  const toolbar=
+    document.createElement("div");
+
+  toolbar.className="wb-toolbar";
+
+
+  const title=
+    document.createElement("div");
+
+  title.className="wb-title";
+
+  title.textContent=
+    'WHITEBOARD FOR "'+
+    box._ownerWord.textContent
+      .trim()
+      .toUpperCase()+
+    '"';
+
+
+  const stage=
+    document.createElement("div");
+
+  stage.className="wb-stage";
+
+
+  const canvas=
+    document.createElement("canvas");
+
+  canvas.className="wb-canvas";
+
+
+  const elements=
+    document.createElement("div");
+
+  elements.className="wb-elements";
+
+
+  const status=
+    document.createElement("div");
+
+  status.className="wb-status";
+
+
+  stage.append(
+    canvas,
+    elements,
+    status
+  );
+
+  board.append(
+    toolbar,
+    title,
+    stage
+  );
+
+  content.appendChild(board);
+
+
+  box._tabs.appendChild(tab);
+  box._contents.appendChild(content);
+
+
+  tab.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      activateTab(
+        box,
+        index
+      );
+    }
+  );
+
+
+  const ctx=
+    canvas.getContext("2d");
+
+
+  let currentTool="select";
+  let drawing=false;
+  let startX=0;
+  let startY=0;
+  let strokes=[];
+  let undoHistory=[];
+  let redoHistory=[];
+
+
+  function resize(){
+
+    const rect=
+      stage.getBoundingClientRect();
+
+    if(
+      rect.width<=0||
+      rect.height<=0
+    )return;
+
+
+    const dpr=
+      window.devicePixelRatio||1;
+
+
+    canvas.width=
+      Math.floor(rect.width*dpr);
+
+    canvas.height=
+      Math.floor(rect.height*dpr);
+
+
+    canvas.style.width=
+      rect.width+"px";
+
+    canvas.style.height=
+      rect.height+"px";
+
+
+    ctx.setTransform(
+      dpr,
+      0,
+      0,
+      dpr,
+      0,
+      0
+    );
+
+
+    redraw();
+  }
+
+
+  function clearCanvas(){
+
+    const rect=
+      stage.getBoundingClientRect();
+
+    ctx.clearRect(
+      0,
+      0,
+      rect.width,
+      rect.height
+    );
+  }
+
+
+  function redraw(){
+
+    clearCanvas();
+
+
+    strokes.forEach(
+      function(s){
+
+        if(
+          s.type==="pen"||
+          s.type==="marker"
+        ){
+
+          if(!s.points.length)return;
+
+
+          ctx.beginPath();
+
+
+          s.points.forEach(
+            function(point,i){
+
+              if(i===0){
+
+                ctx.moveTo(
+                  point.x,
+                  point.y
+                );
+
+              }else{
+
+                ctx.lineTo(
+                  point.x,
+                  point.y
+                );
+              }
+            }
+          );
+
+
+          ctx.lineCap="round";
+          ctx.lineJoin="round";
+
+
+          if(s.type==="marker"){
+
+            ctx.strokeStyle="#b77cff";
+            ctx.globalAlpha=.3;
+            ctx.lineWidth=16;
+
+          }else{
+
+            ctx.strokeStyle="#65bfff";
+            ctx.globalAlpha=1;
+            ctx.lineWidth=3;
+          }
+
+
+          ctx.stroke();
+          ctx.globalAlpha=1;
+        }
+
+
+        if(s.type==="line"){
+
+          drawLine(
+            s.x1,
+            s.y1,
+            s.x2,
+            s.y2
+          );
+        }
+
+
+        if(s.type==="arrow"){
+
+          drawArrow(
+            s.x1,
+            s.y1,
+            s.x2,
+            s.y2
+          );
+        }
+
+
+        if(s.type==="connector"){
+
+          drawConnector(
+            s.x1,
+            s.y1,
+            s.x2,
+            s.y2
+          );
+        }
+
+
+        if(s.type==="shape"){
+
+          ctx.strokeStyle="#65bfff";
+          ctx.lineWidth=2;
+
+          ctx.strokeRect(
+            s.x,
+            s.y,
+            s.w,
+            s.h
+          );
+        }
+      }
+    );
+  }
+
+
+  function drawLine(
+    x1,y1,x2,y2
+  ){
+
+    ctx.beginPath();
+
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+
+    ctx.strokeStyle="#65bfff";
+    ctx.lineWidth=2;
+
+    ctx.stroke();
+  }
+
+
+  function drawArrow(
+    x1,y1,x2,y2
+  ){
+
+    drawLine(
+      x1,y1,x2,y2
+    );
+
+
+    const angle=
+      Math.atan2(
+        y2-y1,
+        x2-x1
+      );
+
+
+    const size=11;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x2,
+      y2
+    );
+
+    ctx.lineTo(
+      x2-size*Math.cos(angle-.5),
+      y2-size*Math.sin(angle-.5)
+    );
+
+    ctx.lineTo(
+      x2-size*Math.cos(angle+.5),
+      y2-size*Math.sin(angle+.5)
+    );
+
+    ctx.closePath();
+
+    ctx.fillStyle="#65bfff";
+    ctx.fill();
+  }
+
+
+  function drawConnector(
+    x1,y1,x2,y2
+  ){
+
+    const middle=
+      (x1+x2)/2;
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+      x1,
+      y1
+    );
+
+    ctx.bezierCurveTo(
+      middle,
+      y1,
+      middle,
+      y2,
+      x2,
+      y2
+    );
+
+    ctx.strokeStyle="#b07cff";
+    ctx.lineWidth=2;
+
+    ctx.stroke();
+  }
+
+
+  function saveUndoState(){
+
+    undoHistory.push(
+      JSON.stringify(strokes)
+    );
+
+    if(undoHistory.length>50){
+      undoHistory.shift();
+    }
+
+    redoHistory=[];
+  }
+
+
+  function whiteboardUndo(){
+
+    if(!undoHistory.length)return;
+
+
+    redoHistory.push(
+      JSON.stringify(strokes)
+    );
+
+
+    strokes=
+      JSON.parse(
+        undoHistory.pop()
+      );
+
+
+    redraw();
+  }
+
+
+  function whiteboardRedo(){
+
+    if(!redoHistory.length)return;
+
+
+    undoHistory.push(
+      JSON.stringify(strokes)
+    );
+
+
+    strokes=
+      JSON.parse(
+        redoHistory.pop()
+      );
+
+
+    redraw();
+  }
+
+
+  function setTool(tool){
+
+    currentTool=tool;
+
+
+    toolbar
+      .querySelectorAll(
+        "[data-wb-tool]"
+      )
+      .forEach(
+        function(button){
+
+          button.classList.toggle(
+            "active-tool",
+            button.dataset.wbTool===tool
+          );
+        }
+      );
+
+
+    status.textContent=
+      "Tool: "+tool;
+  }
+
+
+  function createToolButton(
+    label,
+    tool
+  ){
+
+    const button=
+      document.createElement("button");
+
+    button.type="button";
+    button.textContent=label;
+    button.dataset.wbTool=tool;
+
+
+    button.addEventListener(
+      "click",
+      function(event){
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        setTool(tool);
+      }
+    );
+
+
+    toolbar.appendChild(button);
+  }
+
+
+  createToolButton("Select","select");
+  createToolButton("Pen","pen");
+  createToolButton("Marker","marker");
+  createToolButton("Eraser","eraser");
+  createToolButton("Text","text");
+  createToolButton("Note","note");
+  createToolButton("Shape","shape");
+  createToolButton("Line","line");
+  createToolButton("Arrow","arrow");
+  createToolButton("Connector","connector");
+  createToolButton("Image","image");
+
+
+  const separator=
+    document.createElement("span");
+
+  separator.style.width="1px";
+  separator.style.height="24px";
+  separator.style.background="#304158";
+
+  toolbar.appendChild(separator);
+
+
+  const undoButton=
+    document.createElement("button");
+
+  undoButton.type="button";
+  undoButton.textContent="Undo";
+
+  undoButton.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      whiteboardUndo();
+    }
+  );
+
+  toolbar.appendChild(
+    undoButton
+  );
+
+
+  const redoButton=
+    document.createElement("button");
+
+  redoButton.type="button";
+  redoButton.textContent="Redo";
+
+  redoButton.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      whiteboardRedo();
+    }
+  );
+
+  toolbar.appendChild(
+    redoButton
+  );
+
+
+  const deleteButton=
+    document.createElement("button");
+
+  deleteButton.type="button";
+  deleteButton.textContent="Delete";
+
+
+  deleteButton.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if(!strokes.length)return;
+
+      saveUndoState();
+
+      strokes.pop();
+
+      redraw();
+    }
+  );
+
+
+  toolbar.appendChild(
+    deleteButton
+  );
+
+
+  function getPosition(event){
+
+    const rect=
+      canvas.getBoundingClientRect();
+
+    return{
+      x:event.clientX-rect.left,
+      y:event.clientY-rect.top
+    };
+  }
+
+
+  canvas.addEventListener(
+    "pointerdown",
+    function(event){
+
+      const p=
+        getPosition(event);
+
+      startX=p.x;
+      startY=p.y;
+
+
+      if(
+        currentTool==="pen"||
+        currentTool==="marker"||
+        currentTool==="eraser"
+      ){
+
+        saveUndoState();
+
+        drawing=true;
+
+        strokes.push({
+          type:
+            currentTool==="marker"
+            ?"marker"
+            :"pen",
+          points:[p]
+        });
+
+
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+
+        redraw();
+
+        return;
+      }
+
+
+      if(
+        currentTool==="line"||
+        currentTool==="arrow"||
+        currentTool==="connector"||
+        currentTool==="shape"
+      ){
+
+        saveUndoState();
+
+        drawing=true;
+
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+
+        return;
+      }
+
+
+      if(currentTool==="text"){
+
+        const value=
+          window.prompt("Text:");
+
+        if(value){
+
+          createTextElement(
+            value,
+            p.x,
+            p.y
+          );
+        }
+
+        setTool("select");
+
+        return;
+      }
+
+
+      if(currentTool==="note"){
+
+        const value=
+          window.prompt("Note:");
+
+        if(value){
+
+          createNoteElement(
+            value,
+            p.x,
+            p.y
+          );
+        }
+
+        setTool("select");
+
+        return;
+      }
+
+
+      if(currentTool==="image"){
+
+        openImagePicker(
+          p.x,
+          p.y
+        );
+
+        setTool("select");
+      }
+    }
+  );
+
+
+  canvas.addEventListener(
+    "pointermove",
+    function(event){
+
+      if(!drawing)return;
+
+
+      const p=
+        getPosition(event);
+
+
+      if(
+        currentTool==="pen"||
+        currentTool==="marker"||
+        currentTool==="eraser"
+      ){
+
+        const stroke=
+          strokes[
+            strokes.length-1
+          ];
+
+        stroke.points.push(p);
+
+        redraw();
+
+        return;
+      }
+
+
+      redraw();
+
+
+      if(currentTool==="line"){
+
+        drawLine(
+          startX,
+          startY,
+          p.x,
+          p.y
+        );
+      }
+
+
+      if(currentTool==="arrow"){
+
+        drawArrow(
+          startX,
+          startY,
+          p.x,
+          p.y
+        );
+      }
+
+
+      if(currentTool==="connector"){
+
+        drawConnector(
+          startX,
+          startY,
+          p.x,
+          p.y
+        );
+      }
+
+
+      if(currentTool==="shape"){
+
+        ctx.strokeStyle="#65bfff";
+        ctx.lineWidth=2;
+
+        ctx.strokeRect(
+          startX,
+          startY,
+          p.x-startX,
+          p.y-startY
+        );
+      }
+    }
+  );
+
+
+  canvas.addEventListener(
+    "pointerup",
+    function(event){
+
+      if(!drawing)return;
+
+
+      const p=
+        getPosition(event);
+
+
+      if(
+        currentTool==="line"||
+        currentTool==="arrow"||
+        currentTool==="connector"
+      ){
+
+        strokes.push({
+          type:currentTool,
+          x1:startX,
+          y1:startY,
+          x2:p.x,
+          y2:p.y
+        });
+      }
+
+
+      if(currentTool==="shape"){
+
+        strokes.push({
+          type:"shape",
+          x:startX,
+          y:startY,
+          w:p.x-startX,
+          h:p.y-startY
+        });
+      }
+
+
+      drawing=false;
+
+      redraw();
+    }
+  );
+
+
+  function createTextElement(
+    text,
+    x,
+    y
+  ){
+
+    const element=
+      document.createElement("div");
+
+    element.className=
+      "wb-element wb-text";
+
+    element.textContent=text;
+
+    element.style.left=
+      x+"px";
+
+    element.style.top=
+      y+"px";
+
+
+    elements.appendChild(
+      element
+    );
+
+    makeDraggable(element);
+  }
+
+
+  function createNoteElement(
+    text,
+    x,
+    y
+  ){
+
+    const element=
+      document.createElement("div");
+
+    element.className=
+      "wb-element wb-note";
+
+    element.contentEditable="true";
+
+    element.textContent=text;
+
+    element.style.left=
+      x+"px";
+
+    element.style.top=
+      y+"px";
+
+
+    elements.appendChild(
+      element
+    );
+
+    makeDraggable(element);
+  }
+
+
+  function openImagePicker(
+    x,
+    y
+  ){
+
+    const input=
+      document.createElement("input");
+
+    input.type="file";
+    input.accept="image/*";
+
+
+    input.addEventListener(
+      "change",
+      function(){
+
+        const file=
+          input.files[0];
+
+        if(!file)return;
+
+
+        const image=
+          document.createElement("img");
+
+        image.className=
+          "wb-element wb-image";
+
+        image.src=
+          URL.createObjectURL(file);
+
+        image.style.left=
+          x+"px";
+
+        image.style.top=
+          y+"px";
+
+
+        elements.appendChild(
+          image
+        );
+
+        makeDraggable(image);
+      }
+    );
+
+
+    input.click();
+  }
+
+
+  function makeDraggable(
+    element
+  ){
+
+    let dragging=false;
+    let offsetX=0;
+    let offsetY=0;
+
+
+    element.addEventListener(
+      "pointerdown",
+      function(event){
+
+        if(currentTool!=="select"){
+          return;
+        }
+
+
+        dragging=true;
+
+
+        const rect=
+          element.getBoundingClientRect();
+
+
+        offsetX=
+          event.clientX-rect.left;
+
+        offsetY=
+          event.clientY-rect.top;
+
+
+        element.classList.add(
+          "wb-selected"
+        );
+
+
+        element.setPointerCapture(
+          event.pointerId
+        );
+
+
+        event.stopPropagation();
+      }
+    );
+
+
+    element.addEventListener(
+      "pointermove",
+      function(event){
+
+        if(!dragging)return;
+
+
+        const stageRect=
+          stage.getBoundingClientRect();
+
+
+        element.style.left=
+          (
+            event.clientX-
+            stageRect.left-
+            offsetX
+          )+"px";
+
+
+        element.style.top=
+          (
+            event.clientY-
+            stageRect.top-
+            offsetY
+          )+"px";
+      }
+    );
+
+
+    element.addEventListener(
+      "pointerup",
+      function(){
+
+        dragging=false;
+
+        element.classList.remove(
+          "wb-selected"
+        );
+      }
+    );
+  }
+
+
+  setTool("select");
+
+
+  box._whiteboard={
+    resize:resize,
+    redraw:redraw
+  };
+
+
+  const observer=
+    new ResizeObserver(
+      function(){
+
+        if(
+          content.classList.contains(
+            "active"
+          )
+        ){
+
+          resize();
+        }
+      }
+    );
+
+
+  observer.observe(stage);
+
+
+  requestAnimationFrame(
+    resize
+  );
+}
+
+
+/* =====================================================
+   3D FACE
+===================================================== */
+
+function createFace(
+  box,
+  index
+){
+
+  box._faceIndex=index;
+
+
+  const tab=
+    document.createElement("button");
+
+  tab.type="button";
+  tab.className="research-tab";
+  tab.dataset.index=index;
+  tab.textContent="3D Face";
+
+
+  const content=
+    document.createElement("div");
+
+  content.className="tab-content";
+  content.dataset.index=index;
+
+
+  const wrap=
+    document.createElement("div");
+
+  wrap.className="face-wrap";
+
+
+  const title=
+    document.createElement("div");
+
+  title.className="face-title";
+
+  title.textContent=
+    '3D FACE FOR "'+
+    box._ownerWord.textContent
+      .trim()
+      .toUpperCase()+
+    '"';
+
+
+  const area=
+    document.createElement("div");
+
+  area.className="face-area";
+
+
+  const canvas=
+    document.createElement("canvas");
+
+  canvas.className="face-canvas";
+
+
+  const panel=
+    document.createElement("div");
+
+  panel.className="face-panel";
+
+
+  panel.innerHTML=`
+    <label>
+      X Rotation
+      <input class="face-x"
+        type="range"
+        min="-90"
+        max="90"
+        value="0">
+    </label>
+
+    <label>
+      Y Rotation
+      <input class="face-y"
+        type="range"
+        min="-90"
+        max="90"
+        value="0">
+    </label>
+
+    <label>
+      Z Rotation
+      <input class="face-z"
+        type="range"
+        min="-180"
+        max="180"
+        value="0">
+    </label>
+
+    <label>
+      Mesh Density
+      <input class="face-density"
+        type="range"
+        min="5"
+        max="25"
+        value="15">
+    </label>
+
+    <label>
+      <input class="face-lines"
+        type="checkbox"
+        checked>
+      Mesh Lines
+    </label>
+
+    <label>
+      <input class="face-points"
+        type="checkbox"
+        checked>
+      Points
+    </label>
+
+    <label>
+      <input class="face-ids"
+        type="checkbox">
+      Vertex IDs
+    </label>
+
+    <label>
+      <input class="face-neck"
+        type="checkbox"
+        checked>
+      Neck
+    </label>
+
+    <button type="button"
+      class="face-reset">
+      Reset
+    </button>
+  `;
+
+
+  const status=
+    document.createElement("div");
+
+  status.className="face-status";
+
+
+  area.append(
+    canvas,
+    panel,
+    status
+  );
+
+
+  wrap.append(
+    title,
+    area
+  );
+
+
+  content.appendChild(wrap);
+
+
+  box._tabs.appendChild(tab);
+  box._contents.appendChild(content);
+
+
+  tab.addEventListener(
+    "click",
+    function(event){
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      activateTab(
+        box,
+        index
+      );
+    }
+  );
+
+
+  const ctx=
+    canvas.getContext("2d");
+
+
+  const xInput=
+    panel.querySelector(".face-x");
+
+  const yInput=
+    panel.querySelector(".face-y");
+
+  const zInput=
+    panel.querySelector(".face-z");
+
+  const densityInput=
+    panel.querySelector(".face-density");
+
+  const linesInput=
+    panel.querySelector(".face-lines");
+
+  const pointsInput=
+    panel.querySelector(".face-points");
+
+  const idsInput=
+    panel.querySelector(".face-ids");
+
+  const neckInput=
+    panel.querySelector(".face-neck");
+
+  const resetButton=
+    panel.querySelector(".face-reset");
+
+
+  let N=15;
+  let rx=0;
+  let ry=0;
+  let rz=0;
+  let vertices=[];
+  let selected=-1;
+
+
+  function buildFace(){
+
+    N=
+      Number(
+        densityInput.value
+      );
+
+    vertices=[];
+
+
+    for(let y=0;y<N;y++){
+
+      for(let x=0;x<N;x++){
+
+        const u=
+          x/(N-1)-.5;
+
+        const v=
+          y/(N-1)-.48;
+
+
+        const z=
+          100*
+          Math.max(
+            0,
+            1-
+            u*u*4-
+            v*v*3
+          );
+
+
+        vertices.push({
+          x:u*300,
+          y:v*330,
+          z:z
+        });
+      }
+    }
+
+
+    drawFace();
+  }
+
+
+  function resizeFace(){
+
+    const rect=
+      area.getBoundingClientRect();
+
+    if(
+      rect.width<=0||
+      rect.height<=0
+    )return;
+
+
+    const dpr=
+      window.devicePixelRatio||1;
+
+
+    canvas.width=
+      Math.floor(rect.width*dpr);
+
+    canvas.height=
+      Math.floor(rect.height*dpr);
+
+
+    canvas.style.width=
+      rect.width+"px";
+
+    canvas.style.height=
+      rect.height+"px";
+
+
+    ctx.setTransform(
+      dpr,
+      0,
+      0,
+      dpr,
+      0,
+      0
+    );
+
+
+    drawFace();
+  }
+
+
+  function project(point){
+
+    let x=point.x;
+    let y=point.y;
+    let z=point.z;
+
+
+    let a=
+      rx*Math.PI/180;
+
+    let c=Math.cos(a);
+    let s=Math.sin(a);
+
+
+    let ny=
+      y*c-z*s;
+
+    let nz=
+      y*s+z*c;
+
+
+    y=ny;
+    z=nz;
+
+
+    a=
+      ry*Math.PI/180;
+
+    c=Math.cos(a);
+    s=Math.sin(a);
+
+
+    let nx=
+      x*c+z*s;
+
+    nz=
+      -x*s+z*c;
+
+
+    x=nx;
+    z=nz;
+
+
+    a=
+      rz*Math.PI/180;
+
+    c=Math.cos(a);
+    s=Math.sin(a);
+
+
+    nx=
+      x*c-y*s;
+
+    ny=
+      x*s+y*c;
+
+
+    const perspective=650;
+
+    const scale=
+      perspective/
+      Math.max(
+        100,
+        perspective-z
+      );
+
+
+    const rect=
+      area.getBoundingClientRect();
+
+
+    return{
+      x:rect.width/2+nx*scale,
+      y:rect.height/2+ny*scale
+    };
+  }
+
+
+  function drawFace(){
+
+    const rect=
+      area.getBoundingClientRect();
+
+    if(
+      rect.width<=0||
+      rect.height<=0
+    )return;
+
+
+    ctx.fillStyle="#070b11";
+
+    ctx.fillRect(
+      0,
+      0,
+      rect.width,
+      rect.height
+    );
+
+
+    ctx.strokeStyle="#101c29";
+    ctx.lineWidth=1;
+
+
+    for(
+      let x=0;
+      x<rect.width;
+      x+=30
+    ){
+
+      ctx.beginPath();
+
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,rect.height);
+
+      ctx.stroke();
+    }
+
+
+    for(
+      let y=0;
+      y<rect.height;
+      y+=30
+    ){
+
+      ctx.beginPath();
+
+      ctx.moveTo(0,y);
+      ctx.lineTo(rect.width,y);
+
+      ctx.stroke();
+    }
+
+
+    const points=
+      vertices.map(project);
+
+
+    if(neckInput.checked){
+
+      ctx.beginPath();
+
+      ctx.moveTo(
+        rect.width/2-105,
+        rect.height/2+120
+      );
+
+      ctx.lineTo(
+        rect.width/2+105,
+        rect.height/2+120
+      );
+
+      ctx.lineTo(
+        rect.width/2+80,
+        rect.height/2+245
+      );
+
+      ctx.lineTo(
+        rect.width/2-80,
+        rect.height/2+245
+      );
+
+      ctx.closePath();
+
+      ctx.fillStyle="#111b27";
+      ctx.fill();
+
+      ctx.strokeStyle="#38506a";
+      ctx.stroke();
+    }
+
+
+    if(linesInput.checked){
+
+      ctx.strokeStyle="#31506a";
+      ctx.lineWidth=1;
+
+
+      for(let y=0;y<N;y++){
+
+        ctx.beginPath();
+
+        for(let x=0;x<N;x++){
+
+          const p=
+            points[y*N+x];
+
+          if(x===0)
+            ctx.moveTo(p.x,p.y);
+          else
+            ctx.lineTo(p.x,p.y);
+        }
+
+        ctx.stroke();
+      }
+
+
+      for(let x=0;x<N;x++){
+
+        ctx.beginPath();
+
+        for(let y=0;y<N;y++){
+
+          const p=
+            points[y*N+x];
+
+          if(y===0)
+            ctx.moveTo(p.x,p.y);
+          else
+            ctx.lineTo(p.x,p.y);
+        }
+
+        ctx.stroke();
+      }
+    }
+
+
+    if(pointsInput.checked){
+
+      points.forEach(
+        function(p,i){
+
+          ctx.beginPath();
+
+          ctx.arc(
+            p.x,
+            p.y,
+            i===selected?5:2.5,
+            0,
+            Math.PI*2
+          );
+
+          ctx.fillStyle=
+            i===selected
+            ?"white"
+            :"#62bfff";
+
+          ctx.fill();
+        }
+      );
+    }
+
+
+    if(idsInput.checked){
+
+      ctx.fillStyle="#7890a8";
+      ctx.font="8px Arial";
+
+
+      points.forEach(
+        function(p,i){
+
+          ctx.fillText(
+            String(i),
+            p.x+4,
+            p.y-4
+          );
+        }
+      );
+    }
+
+
+    status.textContent=
+      "3D Face • "+
+      N+" × "+N+
+      " • Drag vertices";
+  }
+
+
+  canvas.addEventListener(
+    "pointerdown",
+    function(event){
+
+      const rect=
+        canvas.getBoundingClientRect();
+
+
+      const x=
+        event.clientX-
+        rect.left;
+
+      const y=
+        event.clientY-
+        rect.top;
+
+
+      let closest=-1;
+      let distance=Infinity;
+
+
+      vertices.forEach(
+        function(vertex,i){
+
+          const point=
+            project(vertex);
+
+
+          const d=
+            Math.hypot(
+              point.x-x,
+              point.y-y
+            );
+
+
+          if(
+            d<distance&&
+            d<15
+          ){
+
+            distance=d;
+            closest=i;
+          }
+        }
+      );
+
+
+      selected=closest;
+
+
+      if(selected>=0){
+
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+      }
+
+
+      drawFace();
+    }
+  );
+
+
+  canvas.addEventListener(
+    "pointermove",
+    function(event){
+
+      if(selected<0)return;
+
+
+      const rect=
+        canvas.getBoundingClientRect();
+
+
+      vertices[selected].x=
+        event.clientX-
+        rect.left-
+        rect.width/2;
+
+
+      vertices[selected].y=
+        event.clientY-
+        rect.top-
+        rect.height/2;
+
+
+      drawFace();
+    }
+  );
+
+
+  canvas.addEventListener(
+    "pointerup",
+    function(){
+
+      selected=-1;
+
+      drawFace();
+    }
+  );
+
+
+  xInput.addEventListener(
+    "input",
+    function(){
+
+      rx=Number(xInput.value);
+
+      drawFace();
+    }
+  );
+
+
+  yInput.addEventListener(
+    "input",
+    function(){
+
+      ry=Number(yInput.value);
+
+      drawFace();
+    }
+  );
+
+
+  zInput.addEventListener(
+    "input",
+    function(){
+
+      rz=Number(zInput.value);
+
+      drawFace();
+    }
+  );
+
+
+  densityInput.addEventListener(
+    "input",
+    buildFace
+  );
+
+
+  linesInput.addEventListener(
+    "change",
+    drawFace
+  );
+
+  pointsInput.addEventListener(
+    "change",
+    drawFace
+  );
+
+  idsInput.addEventListener(
+    "change",
+    drawFace
+  );
+
+  neckInput.addEventListener(
+    "change",
+    drawFace
+  );
+
+
+  resetButton.addEventListener(
+    "click",
+    function(){
+
+      rx=0;
+      ry=0;
+      rz=0;
+
+      xInput.value=0;
+      yInput.value=0;
+      zInput.value=0;
+
+      buildFace();
+    }
+  );
+
+
+  box._face={
+    resize:resizeFace,
+    draw:drawFace
+  };
+
+
+  new ResizeObserver(
+    function(){
+
+      if(
+        content.classList.contains(
+          "active"
+        )
+      ){
+
+        resizeFace();
+      }
+    }
+  ).observe(area);
+
+
+  buildFace();
+}
+
+
+/* =====================================================
+   GLOBAL CONTROLS
+===================================================== */
+
+document
+  .getElementById("openAllBtn")
+  .addEventListener(
+    "click",
+    function(){
+
+      researchBoxes.forEach(
+        function(box){
+
+          box.classList.remove(
+            "closed"
+          );
+
+
+          const button=
+            box.querySelector(
+              ".collapse-btn"
+            );
+
+
+          if(button){
+            button.textContent="−";
+          }
+        }
+      );
+    }
+  );
+
+
+document
+  .getElementById("closeAllBtn")
+  .addEventListener(
+    "click",
+    function(){
+
+      researchBoxes.forEach(
+        function(box){
+
+          box.classList.add(
+            "closed"
+          );
+
+
+          const button=
+            box.querySelector(
+              ".collapse-btn"
+            );
+
+
+          if(button){
+            button.textContent="+";
+          }
+        }
+      );
+    }
+  );
+
+
+document
+  .getElementById("clearAllBtn")
+  .addEventListener(
+    "click",
+    function(){
+
+      researchBoxes.forEach(
+        function(box){
+
+          if(box.parentNode){
+
+            box.parentNode.removeChild(
+              box
+            );
+          }
+        }
+      );
+
+
+      researchBoxes.length=0;
+
+      rootParagraphs.innerHTML="";
+
+      pathbar.textContent=
+        "Selected path: —";
+    }
+  );
+</script>
+
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Eye Cursor Lag Lab</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#070d18;color:#e8f2ff}
+body{display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#111c2d;border-bottom:1px solid #2b405e}
+h1{font-size:16px;margin:0 auto 0 0;letter-spacing:.5px}
+button,input{background:#1c2d44;color:#eef6ff;border:1px solid #405979;border-radius:6px;padding:8px}
+button{cursor:pointer}button:hover{background:#2b4261}
+main{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 290px}
+#stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(ellipse at center,#152641 0%,#0b1423 65%,#070d18 100%);cursor:none}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.cursor-help{position:absolute;left:14px;bottom:12px;color:#91a9c9;font-size:12px;pointer-events:none}
+aside{background:#101a29;border-left:1px solid #2b405e;padding:16px;overflow:auto}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:1.4px;color:#91caff;margin:4px 0 18px}
+.control{margin-bottom:20px}
+.control label{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#c5d6ed;margin-bottom:8px}
+.control output{color:#75d8ff;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;padding:0;accent-color:#5dd7ff}
+.check{display:flex;align-items:center;gap:8px;font-size:12px;margin:13px 0;color:#d3e2f6}
+.check input{accent-color:#5dd7ff}
+.note{font-size:12px;line-height:1.6;color:#9eb2ce;border:1px solid #2a405e;background:#0b1422;border-radius:8px;padding:11px;margin-top:20px}
+.status{font-size:11px;color:#8da5c5;border-top:1px solid #2b405e;padding-top:12px;margin-top:18px}
+@media(max-width:720px){main{grid-template-columns:1fr;grid-template-rows:minmax(240px,1fr) auto}aside{border-left:0;border-top:1px solid #2b405e;max-height:40vh;padding:12px}.control{margin-bottom:12px}.note{margin-top:10px}}
+</style>
+</head>
+<body>
+<header>
+<h1>IRIS / CURSOR OFFSET LAB</h1>
+<button id="reset">Reset</button>
+<button id="center">Center target</button>
+</header>
+<main>
+<section id="stage" aria-label="Interactive eye movement area">
+<canvas id="canvas"></canvas>
+<div class="cursor-help">Move your pointer quickly · The cyan target responds instantly; the eyes stay fixed</div>
+</section>
+<aside>
+<h2>Eye tracking controls</h2>
+<div class="control">
+<label for="drop">Iris vertical offset <output id="dropOut">0 px</output></label>
+<input id="drop" type="range" min="-20" max="20" value="0">
+</div>
+<div class="control">
+<label for="cursorSpeed">Cursor glide speed <output id="cursorSpeedOut">18%</output></label>
+<input id="cursorSpeed" type="range" min="2" max="100" value="18">
+</div>
+<div class="control">
+<label for="lid">Upper eyelid coverage <output id="lidOut">18%</output></label>
+<input id="lid" type="range" min="0" max="75" value="18">
+</div>
+<div class="control">
+<label for="lag">Tracking lag <output id="lagOut">80 ms</output></label>
+<input id="lag" type="range" min="0" max="1800" value="80">
+</div>
+<div class="control">
+<label for="range">Eye movement range <output id="rangeOut">85%</output></label>
+<input id="range" type="range" min="20" max="100" value="85">
+</div>
+<div class="control">
+<label for="smooth">Viscosity / drag <output id="smoothOut">88%</output></label>
+<input id="smooth" type="range" min="5" max="99" value="88">
+</div>
+<div class="control">
+<label for="size">Eye size <output id="sizeOut">100%</output></label>
+<input id="size" type="range" min="65" max="140" value="100">
+</div>
+<label class="check"><input id="trail" type="checkbox" checked> Show intended cursor target</label>
+<label class="check"><input id="guides" type="checkbox" checked> Show vertical offset guide</label>
+<label class="check"><input id="both" type="checkbox" checked> Both eyes track target</label>
+<div class="note"><b>Model:</b> The eye sockets stay fixed. The cursor glides toward your pointer, and only the irises follow it with fluid drag while staying inside the fixed eyeballs. The vertical offset starts at zero. The upper lid covers the top of each eye and can be adjusted. This is a visual simulation, not camera-based eye tracking.</div>
+<div class="status" id="status">Target: center · Iris follows cursor</div>
+</aside>
+</main>
+<script>
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),stage=document.getElementById('stage');
+const controls=['drop','cursorSpeed','lid','lag','range','smooth','size'];
+const val=id=>+document.getElementById(id).value;
+let W=0,H=0,dpr=1;
+let target={x:0,y:0},pointerTarget={x:0,y:0},mouseInside=false;
+let eyes=[];
+function setup(){
+ dpr=Math.min(devicePixelRatio||1,2);W=stage.clientWidth;H=stage.clientHeight;
+ canvas.width=Math.max(1,Math.round(W*dpr));canvas.height=Math.max(1,Math.round(H*dpr));
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ if(!target.x&&!target.y){target={x:W/2,y:H/2};pointerTarget={...target};}
+ const centers=[{x:W*.37,y:H*.48},{x:W*.63,y:H*.48}];
+ eyes=centers.map((p,i)=>({x:p.x,y:p.y,ix:p.x,iy:p.y,tx:p.x,ty:p.y,vx:0,vy:0,side:i}));
+ draw();
+}
+window.addEventListener('resize',setup);
+stage.addEventListener('pointermove',e=>{
+ const r=stage.getBoundingClientRect();pointerTarget={x:e.clientX-r.left,y:e.clientY-r.top};mouseInside=true;
+ document.getElementById('status').textContent='Pointer: '+Math.round(pointerTarget.x)+', '+Math.round(pointerTarget.y)+' · Cursor glides, irises follow';
+});
+stage.addEventListener('pointerleave',()=>{mouseInside=false;pointerTarget={x:W/2,y:H*.42}});
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function rounded(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
+function drawEye(e,index){
+ const scale=val('size')/100,rx=Math.min(W*.145,112)*scale,ry=H*.19*scale;
+ const cx=e.x,cy=e.y;
+ // soft eye socket
+ ctx.save();
+ ctx.shadowColor='#000a';ctx.shadowBlur=25;ctx.fillStyle='#050a12';
+ ctx.beginPath();ctx.ellipse(cx,cy,rx+13,ry+13,0,0,Math.PI*2);ctx.fill();ctx.restore();
+ // almond-shaped eyeball
+ ctx.save();
+ ctx.beginPath();ctx.moveTo(cx-rx,cy);
+ ctx.quadraticCurveTo(cx,cy-ry*1.35,cx+rx,cy);
+ ctx.quadraticCurveTo(cx,cy+ry*1.35,cx-rx,cy);
+ ctx.closePath();
+ const sclera=ctx.createLinearGradient(cx,cy-ry,cx,cy+ry);
+ sclera.addColorStop(0,'#ffffff');sclera.addColorStop(.55,'#eaf4ff');sclera.addColorStop(1,'#aebfd5');
+ ctx.fillStyle=sclera;ctx.fill();
+ ctx.strokeStyle='#91a9c7';ctx.lineWidth=2;ctx.stroke();
+ // Only the iris and pupil move; the eyeball and eyelids remain fixed.
+ // A small optional vertical offset can be applied.
+ let desiredX=target.x-cx,desiredY=target.y-cy+val('drop');
+ const maxX=rx*.48*val('range')/100,maxY=ry*.48*val('range')/100;
+ desiredX=clamp(desiredX,-maxX,maxX);desiredY=clamp(desiredY,-maxY,maxY);
+ if(index===1&&!document.getElementById('both').checked){desiredX=0;desiredY=val('drop')*.25}
+ e.tx=cx+desiredX;e.ty=cy+desiredY;
+ // Keep the iris physically inside the eye's almond-shaped space.
+ const nx=(e.tx-cx)/(rx*.83),ny=(e.ty-cy)/(ry*1.05);
+ const norm=Math.sqrt(nx*nx+ny*ny);if(norm>1){e.tx=cx+(nx/norm)*rx*.83;e.ty=cy+(ny/norm)*ry*1.05;}
+ // Viscous spring: the iris resists movement, trails the cursor, and settles gradually.
+ const lagMs=val('lag');
+ const viscosity=val('smooth')/100;
+ const dt=1/60;
+ const stiffness=5 + (1-viscosity)*14;
+ const damping=0.72 + viscosity*0.275;
+ const lagFactor=1000/(1000+lagMs);
+ e.vx += (e.tx-e.ix)*stiffness*dt*lagFactor;
+ e.vy += (e.ty-e.iy)*stiffness*dt*lagFactor;
+ e.vx *= damping; e.vy *= damping;
+ e.ix += e.vx; e.iy += e.vy;
+ const ir=Math.min(rx*.31,ry*.58);
+ // Clip iris and pupil to the eyeball so they stay in the eye's space.
+ ctx.save();ctx.beginPath();ctx.moveTo(cx-rx,cy);ctx.quadraticCurveTo(cx,cy-ry*1.35,cx+rx,cy);ctx.quadraticCurveTo(cx,cy+ry*1.35,cx-rx,cy);ctx.closePath();ctx.clip();
+ // iris outer ring
+ const ig=ctx.createRadialGradient(e.ix-ir*.15,e.iy-ir*.15,ir*.08,e.ix,e.iy,ir);
+ ig.addColorStop(0,'#8ceaff');ig.addColorStop(.25,'#2795d0');ig.addColorStop(.65,'#12527f');ig.addColorStop(1,'#09213d');
+ ctx.fillStyle=ig;ctx.beginPath();ctx.arc(e.ix,e.iy,ir,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='#67dfff';ctx.lineWidth=2;ctx.stroke();
+ // iris fibers
+ ctx.strokeStyle='#8bdcff70';ctx.lineWidth=1;
+ for(let k=0;k<32;k++){let a=k*Math.PI*2/32;ctx.beginPath();ctx.moveTo(e.ix+Math.cos(a)*ir*.55,e.iy+Math.sin(a)*ir*.55);ctx.lineTo(e.ix+Math.cos(a)*ir*.9,e.iy+Math.sin(a)*ir*.9);ctx.stroke()}
+ // pupil
+ const pr=ir*.43;
+ const pg=ctx.createRadialGradient(e.ix-pr*.3,e.iy-pr*.3,1,e.ix,e.iy,pr);
+ pg.addColorStop(0,'#13263c');pg.addColorStop(1,'#01050b');
+ ctx.fillStyle=pg;ctx.beginPath();ctx.arc(e.ix,e.iy,pr,0,Math.PI*2);ctx.fill();
+ // catchlights
+ ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(e.ix-pr*.36,e.iy-pr*.42,pr*.23,0,Math.PI*2);ctx.fill();
+ ctx.globalAlpha=.65;ctx.beginPath();ctx.arc(e.ix+pr*.38,e.iy+pr*.2,pr*.1,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+ ctx.restore();ctx.restore();
+ // Upper eyelid: a skin-toned curved flap that overlaps the top of the eyeball.
+ const lid=val('lid')/100;
+ if(lid>0){ctx.save();ctx.beginPath();ctx.moveTo(cx-rx-2,cy-ry*.02);ctx.quadraticCurveTo(cx,cy-ry*(1.35-lid*1.65),cx+rx+2,cy-ry*.02);ctx.lineTo(cx+rx+2,cy-ry*1.5);ctx.lineTo(cx-rx-2,cy-ry*1.5);ctx.closePath();const skin=ctx.createLinearGradient(0,cy-ry*1.5,0,cy+ry*.1);skin.addColorStop(0,'#263951');skin.addColorStop(1,'#71839a');ctx.fillStyle=skin;ctx.fill();ctx.strokeStyle='#8ca2bc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-rx,cy-ry*.02);ctx.quadraticCurveTo(cx,cy-ry*(1.35-lid*1.65),cx+rx,cy-ry*.02);ctx.stroke();ctx.restore();}
+ // upper and lower eyelid lines
+ ctx.strokeStyle='#627b9c';ctx.lineWidth=3;
+ ctx.beginPath();ctx.moveTo(cx-rx,cy);ctx.quadraticCurveTo(cx,cy-ry*1.35,cx+rx,cy);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(cx-rx,cy);ctx.quadraticCurveTo(cx,cy+ry*1.35,cx+rx,cy);ctx.stroke();
+ // labels
+ ctx.font='11px Arial';ctx.fillStyle='#90a9c9';ctx.textAlign='center';ctx.fillText(index===0?'LEFT EYE':'RIGHT EYE',cx,cy+ry+28);ctx.textAlign='start';
+}
+function draw(){
+ if(!ctx)return;
+ // The visible cursor is intentionally smoothed instead of snapping to the physical pointer.
+ const cursorAlpha=0.006 + Math.pow(val('cursorSpeed')/100,2)*0.42;
+ target.x += (pointerTarget.x-target.x)*cursorAlpha;target.y += (pointerTarget.y-target.y)*cursorAlpha;
+ ctx.clearRect(0,0,W,H);
+ // faint technical grid
+ ctx.strokeStyle='#29405c40';ctx.lineWidth=1;
+ for(let x=0;x<W;x+=30){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke()}
+ for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ // guide from cursor target down to the expected iris target
+ if(document.getElementById('guides').checked){
+  ctx.save();ctx.setLineDash([5,6]);ctx.strokeStyle='#50d8ff80';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(target.x,target.y);ctx.lineTo(target.x,target.y+val('drop'));ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#50d8ff';ctx.beginPath();ctx.arc(target.x,target.y+val('drop'),4,0,Math.PI*2);ctx.fill();ctx.restore();
+ }
+ // eyes are fixed in their sockets, only irises/pupils move
+ eyes.forEach((e,i)=>drawEye(e,i));
+ // cursor target crosshair
+ if(document.getElementById('trail').checked){
+  ctx.save();ctx.strokeStyle='#60e6ff';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(target.x-10,target.y);ctx.lineTo(target.x+10,target.y);ctx.moveTo(target.x,target.y-10);ctx.lineTo(target.x,target.y+10);ctx.stroke();
+  ctx.beginPath();ctx.arc(target.x,target.y,5,0,Math.PI*2);ctx.stroke();
+  ctx.fillStyle='#a9f3ff';ctx.font='11px Arial';ctx.fillText('CURSOR TARGET',target.x+12,target.y-12);ctx.restore();
+ }
+}
+function animate(){draw();requestAnimationFrame(animate)}
+controls.forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+ const units={drop:' px',lag:' ms',range:'%',smooth:'%',size:'%'};
+ document.getElementById(id+'Out').textContent=val(id)+units[id];
+ if(id==='drop')eyes.forEach(e=>{e.ty=e.y+val('drop')});
+}));
+document.getElementById('reset').onclick=()=>{document.getElementById('drop').value=0;document.getElementById('cursorSpeed').value=35;document.getElementById('lid').value=18;document.getElementById('lag').value=260;document.getElementById('range').value=85;document.getElementById('smooth').value=88;document.getElementById('size').value=100;controls.forEach(id=>document.getElementById(id).dispatchEvent(new Event('input')));target={x:W/2,y:H*.42};pointerTarget={...target};setup()};
+document.getElementById('center').onclick=()=>{target={x:W/2,y:H*.42};pointerTarget={...target};mouseInside=false};
+setup();
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TONGUE ALL THROUGH HTML</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #030712;
+            color: #e2e8f0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header Navigation */
+        header {
+            height: 50px;
+            background-color: #0b132b;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 10;
+        }
+
+        .logo {
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            color: #ffffff;
+        }
+        .logo span {
+            color: #38bdf8;
+            font-weight: 400;
+            font-size: 14px;
+            margin-left: 8px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            background: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn.active, .btn:hover {
+            background: #0284c7;
+            color: #ffffff;
+            border-color: #38bdf8;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        /* Main Workspace Layout */
+        .main-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 280px 1fr 280px;
+            height: calc(100vh - 50px);
+            position: relative;
+        }
+
+        /* Control Sidebar Panels */
+        .sidebar {
+            background: rgba(11, 19, 43, 0.85);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid #1e293b;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 5;
+        }
+
+        .sidebar.right {
+            border-right: none;
+            border-left: 1px solid #1e293b;
+        }
+
+        .panel-group {
+            background: #0d172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #38bdf8;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-row {
+            margin-bottom: 10px;
+        }
+
+        .control-row label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .control-row label span {
+            color: #f1f5f9;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            background: #334155;
+            border-radius: 2px;
+            outline: none;
+            accent-color: #38bdf8;
+            cursor: pointer;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 11px;
+            color: #94a3b8;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 32px;
+            height: 18px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155;
+            transition: .3s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 12px;
+            width: 12px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #0284c7;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(14px);
+        }
+
+        /* 3D Viewport */
+        .viewport-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Overlays on top of viewport */
+        .instruction-overlay {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #38bdf8;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 11px;
+            color: #cbd5e1;
+            pointer-events: none;
+        }
+
+        .instruction-overlay ul {
+            list-style: none;
+            margin-top: 4px;
+        }
+
+        .instruction-overlay li {
+            margin-bottom: 2px;
+        }
+
+        .info-card {
+            position: absolute;
+            bottom: 16px;
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 11px;
+        }
+
+        .info-card.left { left: 16px; }
+        .info-card.right { right: 16px; }
+
+        .info-card h4 {
+            color: #38bdf8;
+            margin-bottom: 6px;
+            font-size: 11px;
+        }
+
+        .info-card div {
+            margin-bottom: 2px;
+            color: #94a3b8;
+        }
+        .info-card span { color: #f1f5f9; }
+
+        .color-palette {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .color-dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* Bottom view buttons */
+        .view-bar {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            background: rgba(15, 23, 42, 0.85);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid #1e293b;
+        }
+    </style>
+
+    <!-- Import Three.js via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="logo">TONGUE <span>ALL THROUGH HTML</span></div>
+        <div class="nav-buttons">
+            <button class="btn active">3D View</button>
+            <button class="btn">Mesh</button>
+            <button class="btn">Textures</button>
+            <button class="btn">Flow</button>
+            <button class="btn">Edit</button>
+            <button class="btn">Save</button>
+        </div>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                Live
+            </div>
+            <button class="btn" style="background:#0284c7; color:#fff; border:none;">Export HTML</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="main-container">
+        
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="panel-group">
+                <div class="panel-title">TONGUE CONTROLS</div>
+                
+                <div style="font-size: 11px; font-weight: 600; color:#cbd5e1; margin-bottom: 6px;">Movement</div>
+                <div class="control-row">
+                    <label>X (Left / Right) <span id="val-posX">0</span></label>
+                    <input type="range" id="posX" min="-2" max="2" step="0.01" value="0">
+                </div>
+                <div class="control-row">
+                    <label>Y (Up / Down) <span id="val-posY">0</span></label>
+                    <input type="range" id="posY" min="-2" max="2" step="0.01" value="0">
+                </div>
+                <div class="control-row">
+                    <label>Z (Forward / Back) <span id="val-posZ">0</span></label>
+                    <input type="range" id="posZ" min="-2" max="2" step="0.01" value="0">
+                </div>
+
+                <div style="font-size: 11px; font-weight: 600; color:#cbd5e1; margin: 10px 0 6px 0;">Rotation</div>
+                <div class="control-row">
+                    <label>Pitch (Up / Down) <span id="val-rotX">0</span></label>
+                    <input type="range" id="rotX" min="-45" max="45" value="0">
+                </div>
+                <div class="control-row">
+                    <label>Yaw (Left / Right) <span id="val-rotY">0</span></label>
+                    <input type="range" id="rotY" min="-45" max="45" value="0">
+                </div>
+                <div class="control-row">
+                    <label>Roll (Tilt) <span id="val-rotZ">0</span></label>
+                    <input type="range" id="rotZ" min="-45" max="45" value="0">
+                </div>
+            </div>
+
+            <div class="panel-group">
+                <div class="panel-title">Mesh Settings</div>
+                <div class="toggle-row">
+                    <span>Show Wireframe</span>
+                    <label class="switch">
+                        <input type="checkbox" id="showMesh" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <span>Show Surface Points</span>
+                    <label class="switch">
+                        <input type="checkbox" id="showPoints" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="panel-group">
+                <div class="panel-title">Tongue Features</div>
+                <div class="toggle-row">
+                    <span>Animate (Wiggle)</span>
+                    <label class="switch">
+                        <input type="checkbox" id="animateWiggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="toggle-row">
+                    <span>Enable Moisture</span>
+                    <label class="switch">
+                        <input type="checkbox" id="enableMoisture" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3D Canvas Center Area -->
+        <div class="viewport-container">
+            <div id="canvas-container"></div>
+
+            <div class="instruction-overlay">
+                <strong>Drag to move the tongue</strong>
+                <ul>
+                    <li>• Left click + drag = rotate view</li>
+                    <li>• Right click + drag = translate view</li>
+                    <li>• Scroll = zoom</li>
+                </ul>
+            </div>
+
+            <div class="info-card left">
+                <h4>Selected Point</h4>
+                <div>X: <span id="ptX">0.42</span></div>
+                <div>Y: <span id="ptY">-0.18</span></div>
+                <div>Z: <span id="ptZ">-0.36</span></div>
+                <div style="margin-top: 4px; color: #38bdf8;">Vertex ID: 023</div>
+            </div>
+
+            <div class="view-bar">
+                <button class="btn" onclick="setView('front')">Front</button>
+                <button class="btn" onclick="setView('side')">Side</button>
+                <button class="btn" onclick="setView('top')">Top</button>
+                <button class="btn" onclick="resetView()">Reset View</button>
+            </div>
+
+            <div class="info-card right">
+                <h4>Mesh Info</h4>
+                <div>Vertices: <span>320</span></div>
+                <div>Triangles: <span>598</span></div>
+                <div>Mesh Density: <span>15</span></div>
+                <div>Surface Area: <span>12,480 px²</span></div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar right">
+            <div class="panel-group">
+                <div class="panel-title">TEXTURE & COLOR</div>
+                <div class="control-row">
+                    <label>Brightness <span id="val-bright">1.0</span></label>
+                    <input type="range" id="brightness" min="0.2" max="2" step="0.1" value="1.0">
+                </div>
+                <div class="control-row">
+                    <label>Roughness <span id="val-rough">0.3</span></label>
+                    <input type="range" id="roughness" min="0" max="1" step="0.05" value="0.3">
+                </div>
+                <div style="font-size: 11px; color:#94a3b8; margin-top:8px;">Base Color</div>
+                <div class="color-palette">
+                    <div class="color-dot" style="background: #e11d48;" onclick="changeColor(0xe11d48)"></div>
+                    <div class="color-dot" style="background: #f43f5e;" onclick="changeColor(0xf43f5e)"></div>
+                    <div class="color-dot" style="background: #fb7185;" onclick="changeColor(0xfb7185)"></div>
+                    <div class="color-dot" style="background: #9f1239;" onclick="changeColor(0x9f1239)"></div>
+                    <div class="color-dot" style="background: #881337;" onclick="changeColor(0x881337)"></div>
+                </div>
+            </div>
+
+            <div class="panel-group">
+                <div class="panel-title">SIMULATION</div>
+                <div class="control-row">
+                    <label>Moisture Level <span>0.8</span></label>
+                    <input type="range" min="0" max="1" step="0.1" value="0.8">
+                </div>
+                <div class="control-row">
+                    <label>Saliva Flow <span>0.6</span></label>
+                    <input type="range" min="0" max="1" step="0.1" value="0.6">
+                </div>
+                <div class="control-row">
+                    <label>Tongue Strength <span>0.7</span></label>
+                    <input type="range" min="0" max="1" step="0.1" value="0.7">
+                </div>
+            </div>
+
+            <div class="panel-group">
+                <div class="panel-title">EDIT POINTS</div>
+                <button class="btn" style="width: 100%; margin-bottom: 6px;">+ Add Point</button>
+                <button class="btn" style="width: 100%; margin-bottom: 6px;">Connect Points</button>
+                <button class="btn" style="width: 100%; background: #450a0a; color: #fca5a5; border-color: #7f1d1d;">Delete Point</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3D Tongue Logic -->
+    <script>
+        // Setup Three.js Scene
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(2, 3, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 5, 5);
+        scene.add(dirLight);
+
+        const pointLight = new THREE.PointLight(0x38bdf8, 1, 10);
+        pointLight.position.set(-2, 1, 2);
+        scene.add(pointLight);
+
+        // Procedural Tongue Geometry Construction
+        function createTongueGeometry() {
+            const geom = new THREE.CylinderGeometry(0.8, 1.1, 3.5, 32, 32, false);
+            geom.rotateX(Math.PI / 2);
+            geom.scale(1.2, 0.45, 1);
+
+            const position = geom.attributes.position;
+            const vertex = new THREE.Vector3();
+
+            for (let i = 0; i < position.count; i++) {
+                vertex.fromBufferAttribute(position, i);
+
+                // Flatten tip & sculpt form
+                if (vertex.z > 0) {
+                    const normZ = vertex.z / 1.75;
+                    vertex.x *= (1 + normZ * 0.2);
+                    vertex.y *= (1 - normZ * 0.4);
+                }
+
+                // Add central midline groove (median sulcus)
+                const distFromCenter = Math.abs(vertex.x);
+                if (distFromCenter < 0.4 && vertex.y > 0) {
+                    vertex.y -= Math.cos(distFromCenter * Math.PI / 0.8) * 0.12;
+                }
+
+                // Curved arch down
+                vertex.y -= Math.pow(Math.max(0, vertex.z + 0.5), 1.8) * 0.15;
+
+                position.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+
+            geom.computeVertexNormals();
+            return geom;
+        }
+
+        const geometry = createTongueGeometry();
+
+        // Organic Material Definition
+        const material = new THREE.MeshStandardMaterial({
+            color: 0xf43f5e,
+            roughness: 0.3,
+            metalness: 0.1,
+            clearcoat: 0.8,
+            clearcoatRoughness: 0.2
+        });
+
+        const tongueMesh = new THREE.Mesh(geometry, material);
+        
+        // Group for easier transforms
+        const tongueGroup = new THREE.Group();
+        tongueGroup.add(tongueMesh);
+        scene.add(tongueGroup);
+
+        // Wireframe Overlay
+        const wireframeGeo = new THREE.WireframeGeometry(geometry);
+        const wireframeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
+        const wireframe = new THREE.LineSegments(wireframeGeo, wireframeMat);
+        tongueMesh.add(wireframe);
+
+        // Point Overlay
+        const pointsMat = new THREE.PointsMaterial({ color: 0x60a5fa, size: 0.04 });
+        const points = new THREE.Points(geometry, pointsMat);
+        tongueMesh.add(points);
+
+        // Mouth Cavity Background (Dark Throat backdrop)
+        const mouthGeo = new THREE.SphereGeometry(4, 32, 32);
+        const mouthMat = new THREE.MeshBasicMaterial({ color: 0x110509, side: THREE.BackSide });
+        const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+        mouth.position.set(0, 0, -2);
+        scene.add(mouth);
+
+        // UI Event Binding Controls
+        document.getElementById('posX').addEventListener('input', (e) => {
+            tongueGroup.position.x = parseFloat(e.target.value);
+            document.getElementById('val-posX').innerText = e.target.value;
+        });
+        document.getElementById('posY').addEventListener('input', (e) => {
+            tongueGroup.position.y = parseFloat(e.target.value);
+            document.getElementById('val-posY').innerText = e.target.value;
+        });
+        document.getElementById('posZ').addEventListener('input', (e) => {
+            tongueGroup.position.z = parseFloat(e.target.value);
+            document.getElementById('val-posZ').innerText = e.target.value;
+        });
+
+        document.getElementById('rotX').addEventListener('input', (e) => {
+            tongueGroup.rotation.x = THREE.MathUtils.degToRad(e.target.value);
+            document.getElementById('val-rotX').innerText = e.target.value;
+        });
+        document.getElementById('rotY').addEventListener('input', (e) => {
+            tongueGroup.rotation.y = THREE.MathUtils.degToRad(e.target.value);
+            document.getElementById('val-rotY').innerText = e.target.value;
+        });
+        document.getElementById('rotZ').addEventListener('input', (e) => {
+            tongueGroup.rotation.z = THREE.MathUtils.degToRad(e.target.value);
+            document.getElementById('val-rotZ').innerText = e.target.value;
+        });
+
+        document.getElementById('showMesh').addEventListener('change', (e) => {
+            wireframe.visible = e.target.checked;
+        });
+        document.getElementById('showPoints').addEventListener('change', (e) => {
+            points.visible = e.target.checked;
+        });
+        document.getElementById('brightness').addEventListener('input', (e) => {
+            dirLight.intensity = parseFloat(e.target.value) * 1.2;
+            document.getElementById('val-bright').innerText = e.target.value;
+        });
+        document.getElementById('roughness').addEventListener('input', (e) => {
+            material.roughness = parseFloat(e.target.value);
+            document.getElementById('val-rough').innerText = e.target.value;
+        });
+
+        function changeColor(hex) {
+            material.color.setHex(hex);
+        }
+
+        // Camera Views
+        function setView(type) {
+            if (type === 'front') camera.position.set(0, 0, 5);
+            if (type === 'side') camera.position.set(5, 0, 0);
+            if (type === 'top') camera.position.set(0, 5, 0);
+            controls.target.set(0, 0, 0);
+        }
+
+        function resetView() {
+            camera.position.set(2, 3, 5);
+            controls.target.set(0, 0, 0);
+        }
+
+        // Animation Loop
+        let clock = new THREE.Clock();
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = clock.getElapsedTime();
+            const animateWiggle = document.getElementById('animateWiggle').checked;
+
+            if (animateWiggle) {
+                // Subtle organic flexing/breathing motion
+                const pos = geometry.attributes.position;
+                for (let i = 0; i < pos.count; i++) {
+                    let z = pos.getZ(i);
+                    if (z > 0) { // Flex front tip
+                        let wave = Math.sin(time * 3 + z) * 0.02;
+                        pos.setY(i, pos.getY(i) + wave * 0.1);
+                    }
+                }
+                geometry.computeVertexNormals();
+                geometry.attributes.position.needsUpdate = true;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Handle Responsive Resizing
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>

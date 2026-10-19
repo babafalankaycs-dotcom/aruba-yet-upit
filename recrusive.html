@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Recursive Research Engine — Editable Cube Faces</title>
+
+<style>
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  min-height:100%;
+  background:#070a0f;
+  color:#dce7f5;
+  font-family:Arial,Helvetica,sans-serif;
+}
+
+button,input,textarea{font:inherit}
+button{cursor:pointer}
+
+#toolbar{
+  position:sticky;
+  top:0;
+  z-index:1000;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:12px 18px;
+  background:#0b111a;
+  border-bottom:1px solid #263447;
+}
+
+button{
+  background:#111b28;
+  color:#dce7f5;
+  border:1px solid #304158;
+  border-radius:6px;
+  padding:8px 14px;
+}
+
+button:hover{
+  background:#1a2a3d;
+}
+
+#workspace{
+  padding:20px;
+  max-width:1300px;
+  margin:0 auto;
+}
+
+#rootArea{
+  background:#0c121b;
+  border:1px solid #29384c;
+  border-radius:9px;
+  padding:16px;
+  margin-bottom:24px;
+}
+
+#rootText{
+  width:100%;
+  min-height:90px;
+  resize:vertical;
+  background:#080d14;
+  color:#dbe8f7;
+  border:1px solid #29384c;
+  border-radius:7px;
+  padding:12px;
+  outline:none;
+  line-height:1.5;
+}
+
+#rootText:focus{
+  border-color:#4288c7;
+}
+
+.action-row{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+/* ENTRY CARD */
+.entry-card{
+  background:#090f17;
+  border:1px solid #202d3e;
+  border-radius:10px;
+  padding:16px;
+  margin-bottom:24px;
+  box-shadow:0 8px 24px #0006;
+}
+
+/* WORD MESH GRID */
+.word-mesh{
+  display:flex;
+  flex-wrap:wrap;
+  gap:16px;
+  align-items:flex-start;
+}
+
+/* INDIVIDUAL WORD TILE CONTAINER */
+.word-tile{
+  background:#0e1724;
+  border:1px solid #283d58;
+  border-radius:8px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  width:170px;
+}
+
+.word-input{
+  width:100%;
+  background:#060b12;
+  border:1px solid #35516d;
+  border-radius:5px;
+  color:#7ee5ff;
+  font-weight:700;
+  font-size:12px;
+  text-align:center;
+  padding:5px;
+  outline:none;
+}
+
+.word-input:focus{
+  border-color:#70e2ff;
+  box-shadow:0 0 0 2px #53d8ff33;
+}
+
+/* MINI 3D CUBE STAGE */
+.mini-stage{
+  height:90px;
+  width:90px;
+  position:relative;
+  perspective:500px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  margin:4px 0;
+}
+
+.mini-cube{
+  width:50px;
+  height:50px;
+  position:relative;
+  transform-style:preserve-3d;
+  transition:transform .5s cubic-bezier(.2,.8,.25,1);
+}
+
+.mini-face{
+  position:absolute;
+  width:50px;
+  height:50px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid #a8dfffcc;
+  background:linear-gradient(145deg,#1b5370ed,#13283df2);
+  color:#f0fbff;
+  font-size:8px;
+  font-weight:700;
+  text-align:center;
+  padding:2px;
+  backface-visibility:hidden;
+  overflow:hidden;
+  overflow-wrap:anywhere;
+}
+
+.mini-face.front{transform:translateZ(25px);}
+.mini-face.back{transform:rotateY(180deg) translateZ(25px);}
+.mini-face.right{transform:rotateY(90deg) translateZ(25px);}
+.mini-face.left{transform:rotateY(-90deg) translateZ(25px);}
+.mini-face.top{transform:rotateX(90deg) translateZ(25px);}
+.mini-face.bottom{transform:rotateX(-90deg) translateZ(25px);}
+
+/* FACE CUSTOMIZER ACCORDION / INPUTS */
+.face-inputs{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.face-inputs details{
+  background:#060b12;
+  border:1px solid #23374e;
+  border-radius:5px;
+  padding:4px 8px;
+  font-size:10px;
+  color:#8daec6;
+}
+
+.face-inputs summary{
+  cursor:pointer;
+  font-weight:700;
+  color:#7ee5ff;
+}
+
+.face-inputs-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:4px;
+  margin-top:6px;
+}
+
+.face-group{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+
+.face-group label{
+  font-size:8px;
+  color:#a6c5dc;
+}
+
+.face-group input{
+  width:100%;
+  background:#03070d;
+  border:1px solid #28415a;
+  border-radius:3px;
+  color:#fff;
+  font-size:9px;
+  padding:3px;
+  text-align:center;
+  outline:none;
+}
+
+.face-group input:focus{
+  border-color:#53d8ff;
+}
+</style>
+</head>
+<body>
+
+  <div id="toolbar">
+    <strong>Recursive Research Engine — Editable Cube Faces</strong>
+  </div>
+
+  <div id="workspace">
+    <div id="rootArea">
+      <textarea id="rootText" placeholder="Type text here... each word will get an interactive cube and custom face controls!"></textarea>
+      <div class="action-row">
+        <button id="addEntryBtn">Generate Word Mesh</button>
+      </div>
+    </div>
+
+    <div id="entriesList"></div>
+  </div>
+
+<script>
+const rootText = document.getElementById('rootText');
+const addEntryBtn = document.getElementById('addEntryBtn');
+const entriesList = document.getElementById('entriesList');
+
+addEntryBtn.addEventListener('click', () => {
+  const fullText = rootText.value.trim();
+  if(!fullText) return;
+
+  const words = fullText.split(/\s+/);
+
+  const card = document.createElement('div');
+  card.className = 'entry-card';
+
+  const mesh = document.createElement('div');
+  mesh.className = 'word-mesh';
+
+  words.forEach((wordText, index) => {
+    const tile = document.createElement('div');
+    tile.className = 'word-tile';
+
+    // Main word input
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'word-input';
+    input.value = wordText;
+
+    // Mini 3D cube stage
+    const stage = document.createElement('div');
+    stage.className = 'mini-stage';
+
+    const cube = document.createElement('div');
+    cube.className = 'mini-cube';
+
+    let rx = (index * 45) % 360;
+    let ry = (index * 60) % 360;
+    cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+
+    const faceData = {
+      front: wordText,
+      back: `W#${index+1}`,
+      right: `Len:${wordText.length}`,
+      left: 'Node',
+      top: 'Flux',
+      bottom: 'Axial'
+    };
+
+    cube.innerHTML = `
+      <div class="mini-face front">${faceData.front}</div>
+      <div class="mini-face back">${faceData.back}</div>
+      <div class="mini-face right">${faceData.right}</div>
+      <div class="mini-face left">${faceData.left}</div>
+      <div class="mini-face top">${faceData.top}</div>
+      <div class="mini-face bottom">${faceData.bottom}</div>
+    `;
+
+    // Click cube to roll
+    stage.addEventListener('click', () => {
+      rx += 90;
+      ry += 90;
+      cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+    });
+
+    stage.appendChild(cube);
+
+    // Face Customizer Inputs
+    const faceControlsWrap = document.createElement('div');
+    faceControlsWrap.className = 'face-inputs';
+    faceControlsWrap.innerHTML = `
+      <details>
+        <summary>Faces</summary>
+        <div class="face-inputs-grid">
+          <div class="face-group"><label>Front</label><input type="text" class="face-f" value="${faceData.front}"></div>
+          <div class="face-group"><label>Back</label><input type="text" class="face-b" value="${faceData.back}"></div>
+          <div class="face-group"><label>Right</label><input type="text" class="face-r" value="${faceData.right}"></div>
+          <div class="face-group"><label>Left</label><input type="text" class="face-l" value="${faceData.left}"></div>
+          <div class="face-group"><label>Top</label><input type="text" class="face-t" value="${faceData.top}"></div>
+          <div class="face-group"><label>Bottom</label><input type="text" class="face-bot" value="${faceData.bottom}"></div>
+        </div>
+      </details>
+    `;
+
+    // Wire up face input events
+    const fInp = faceControlsWrap.querySelector('.face-f');
+    const bInp = faceControlsWrap.querySelector('.face-b');
+    const rInp = faceControlsWrap.querySelector('.face-r');
+    const lInp = faceControlsWrap.querySelector('.face-l');
+    const tInp = faceControlsWrap.querySelector('.face-t');
+    const botInp = faceControlsWrap.querySelector('.face-bot');
+
+    fInp.oninput = () => { cube.querySelector('.front').textContent = fInp.value; };
+    bInp.oninput = () => { cube.querySelector('.back').textContent = bInp.value; };
+    rInp.oninput = () => { cube.querySelector('.right').textContent = rInp.value; };
+    lInp.oninput = () => { cube.querySelector('.left').textContent = lInp.value; };
+    tInp.oninput = () => { cube.querySelector('.top').textContent = tInp.value; };
+    botInp.oninput = () => { cube.querySelector('.bottom').textContent = botInp.value; };
+
+    // Sync main word input with front face and its own field
+    input.oninput = () => {
+      const val = input.value;
+      fInp.value = val;
+      cube.querySelector('.front').textContent = val;
+    };
+
+    tile.appendChild(input);
+    tile.appendChild(stage);
+    tile.appendChild(faceControlsWrap);
+    mesh.appendChild(tile);
+  });
+
+  card.appendChild(mesh);
+  entriesList.prepend(card);
+
+  rootText.value = '';
+});
+</script>
+
+</body>
+</html>

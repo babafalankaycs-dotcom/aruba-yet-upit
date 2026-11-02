@@ -1,0 +1,1262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Word Document & Transcript Creator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter + JetBrains Mono) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        ytRed: '#FF0000',
+                        ytDark: '#0F0F0F',
+                        ytCard: '#1F1F1F',
+                        ytBorder: '#3F3F3F'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(150, 150, 150, 0.4);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(150, 150, 150, 0.6);
+        }
+        /* Word Card Active Glow Effects */
+        .word-card-active {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+            z-index: 20 !important;
+        }
+        /* Printable view tweak */
+        @media print {
+            .no-print { display: none !important; }
+            .print-full { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        }
+
+/* Division of Time workspace */
+.time-division{background:#101827;color:#e5e7eb;border-top:2px solid #334155;padding:26px clamp(16px,4vw,50px);font-family:Inter,Arial,sans-serif}
+.time-division h2{font-size:1.3rem;font-weight:700;margin:0 0 8px}
+.time-division p{font-size:.86rem;color:#9ca3af;margin-bottom:16px}
+.div-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:16px 0}
+.div-controls label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#cbd5e1}
+.div-controls input,.div-controls select{background:#0b1220;border:1px solid #475569;color:white;border-radius:8px;padding:10px}
+.div-controls button,.div-download{border:1px solid #475569;background:#1f2937;color:white;padding:10px 13px;border-radius:8px;cursor:pointer}
+.div-controls button:hover,.div-download:hover{background:#374151}
+.div-grid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(450px,1.9fr);gap:16px}
+.div-panel{background:#192334;border:1px solid #334155;border-radius:12px;padding:16px;min-width:0}
+.div-panel h3{font-size:14px;font-weight:700;margin:0 0 10px}
+.div-table-wrap{max-height:410px;overflow:auto}
+.div-table{width:100%;border-collapse:collapse;font-size:12px}
+.div-table th,.div-table td{padding:9px 7px;border-bottom:1px solid #334155;text-align:left;vertical-align:middle}
+.div-table th{position:sticky;top:0;background:#192334;color:#b5c8eb;z-index:1}
+.div-table tr:hover td{background:#243349}
+.div-table input{background:#0b1220;color:white;border:1px solid #475569;border-radius:6px;padding:6px;width:78px}
+.div-bar{height:6px;background:#263850;border-radius:8px;margin-top:6px;overflow:hidden}
+.div-bar span{height:100%;background:#ef4444;display:block}
+.div-note{font-size:12px;color:#93c5fd;margin:12px 0}
+.div-total{font:600 13px ui-monospace,monospace;color:#86efac}
+@media(max-width:850px){.div-grid{grid-template-columns:1fr}.div-table-wrap{max-height:360px}}
+
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col antialiased selection:bg-red-600 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-ytDark border-b border-ytBorder sticky top-0 z-40 px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-red-600 text-white p-2 rounded-lg flex items-center justify-center shadow-lg shadow-red-600/30">
+                <i class="fa-solid font-bold fa-play text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+                    YouTube Word Document & Transcript Studio
+                    <span class="text-xs bg-red-600/20 text-red-400 font-mono px-2 py-0.5 rounded border border-red-500/30">v1.0</span>
+                </h1>
+                <p class="text-xs text-gray-400">Interactive timed-word document creator for creators & video editors</p>
+            </div>
+        </div>
+
+        <!-- Quick Header Actions -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <button id="themeToggleBtn" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium rounded-lg border border-gray-700 transition flex items-center gap-2">
+                <i class="fa-solid fa-moon text-amber-400"></i> <span id="themeLabel">Dark</span>
+            </button>
+            <button id="quickSampleBtn" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium rounded-lg border border-gray-700 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i> Load Demo
+            </button>
+            <button id="exportJsonBtn" class="px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 text-xs font-medium rounded-lg border border-blue-500/30 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-download"></i> Export JSON
+            </button>
+            <button id="exportHtmlBtn" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 text-xs font-medium rounded-lg border border-emerald-500/30 transition flex items-center gap-1.5">
+                <i class="fa-solid fa-file-export"></i> Print/Export HTML
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Grid -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden">
+
+        <!-- Left Controls & Input Panel -->
+        <section class="lg:col-span-4 bg-gray-900 border-r border-ytBorder p-4 flex flex-col gap-4 overflow-y-auto max-h-[calc(100vh-61px)]">
+            
+            <!-- Step 1: Text Input -->
+            <div class="bg-ytCard border border-ytBorder rounded-xl p-4 shadow-md">
+                <div class="flex justify-between items-center mb-2">
+                    <label for="textInput" class="text-sm font-semibold text-gray-200 flex items-center gap-2">
+                        <i class="fa-solid fa-font text-red-500"></i> 1. Input Words / Script
+                    </label>
+                    <span id="wordCountLabel" class="text-xs font-mono text-gray-400">0 words</span>
+                </div>
+                <textarea id="textInput" rows="6" placeholder="Paste or type your script here... Words will be converted into interactive timed blocks." class="w-full bg-gray-900 border border-ytBorder rounded-lg p-3 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-red-500 font-sans transition resize-y"></textarea>
+                
+                <div class="flex items-center gap-2 mt-3">
+                    <div class="flex-1">
+                        <label class="text-xs text-gray-400 mb-1 block">Group Words By</label>
+                        <select id="groupingMode" class="w-full bg-gray-900 border border-ytBorder text-xs rounded-lg p-2 text-gray-200 focus:outline-none focus:border-red-500">
+                            <option value="single">Single Words</option>
+                            <option value="pairs">2 Words / Phrase</option>
+                            <option value="triplets">3 Words / Phrase</option>
+                            <option value="sentences">Full Sentences</option>
+                        </select>
+                    </div>
+                    <button id="processTextBtn" class="mt-5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium text-xs rounded-lg transition shadow-lg shadow-red-600/20 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-bolt"></i> Generate Cards
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Auto-Timing Options -->
+            <div class="bg-ytCard border border-ytBorder rounded-xl p-4 shadow-md">
+                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2 mb-3">
+                    <i class="fa-solid fa-clock text-amber-500"></i> 2. Auto Timer & WPM Generator
+                </h3>
+                
+                <div class="space-y-3">
+                    <div>
+                        <div class="flex justify-between text-xs text-gray-400 mb-1">
+                            <span>Reading Speed (WPM): <b id="wpmValueDisplay" class="text-red-400">160</b></span>
+                            <span>Target Time: <span id="estimatedTimeDisplay" class="font-mono text-gray-300">00:00.0</span></span>
+                        </div>
+                        <input id="wpmSlider" type="range" min="80" max="320" value="160" step="5" class="w-full accent-red-600 bg-gray-800 rounded-lg h-1.5 cursor-pointer">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Start Delay (s)</label>
+                            <input id="startDelayInput" type="number" min="0" max="60" value="0.0" step="0.5" class="w-full bg-gray-900 border border-ytBorder text-xs rounded-lg p-2 font-mono text-gray-200">
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Timer Format</label>
+                            <select id="timerFormatSelect" class="w-full bg-gray-900 border border-ytBorder text-xs rounded-lg p-2 text-gray-200">
+                                <option value="mmss">00:00 (MM:SS)</option>
+                                <option value="mss">0:00.0 (Dec)</option>
+                                <option value="sec">Seconds (0.0s)</option>
+                                <option value="frames">Frames @ 30fps</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="pt-1 flex gap-2">
+                        <button id="applyAutoTimersBtn" class="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs py-2 rounded-lg font-medium transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-calculator text-amber-400"></i> Auto-Apply Timers
+                        </button>
+                        <button id="resetTimersBtn" class="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 text-xs px-3 py-2 rounded-lg transition" title="Reset All Timers to 0">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Document Canvas Styling & Appearance -->
+            <div class="bg-ytCard border border-ytBorder rounded-xl p-4 shadow-md">
+                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2 mb-3">
+                    <i class="fa-solid fa-palette text-blue-400"></i> 3. Visual & Video Styling
+                </h3>
+
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                        <label class="text-gray-400 block mb-1">Document Layout</label>
+                        <select id="docLayoutSelect" class="w-full bg-gray-900 border border-ytBorder rounded-lg p-2 text-gray-200">
+                            <option value="flex-wrap">Flow / Paragraph Words</option>
+                            <option value="grid">Grid Block Layout</option>
+                            <option value="teleprompter">Subtitle / Teleprompter Block</option>
+                            <option value="document">Formal Document Paper</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-gray-400 block mb-1">Card Font Size</label>
+                        <select id="fontSizeSelect" class="w-full bg-gray-900 border border-ytBorder rounded-lg p-2 text-gray-200">
+                            <option value="text-xs">Small (xs)</option>
+                            <option value="text-sm" selected>Medium (sm)</option>
+                            <option value="text-base">Large (base)</option>
+                            <option value="text-xl">Extra Large (xl)</option>
+                            <option value="text-2xl">Giant Video Overlay</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-gray-400 block mb-1">Badge Color Mode</label>
+                        <select id="badgeColorSelect" class="w-full bg-gray-900 border border-ytBorder rounded-lg p-2 text-gray-200">
+                            <option value="red">YouTube Red</option>
+                            <option value="blue">Electric Blue</option>
+                            <option value="emerald">Emerald Green</option>
+                            <option value="purple">Vibrant Purple</option>
+                            <option value="dark">Monochrome Dark</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-gray-400 block mb-1">Highlight Effect</label>
+                        <select id="highlightEffectSelect" class="w-full bg-gray-900 border border-ytBorder rounded-lg p-2 text-gray-200">
+                            <option value="glow">Neon Glow & Scale</option>
+                            <option value="box">Filled Highlight Box</option>
+                            <option value="underline">Thick Underline</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-3 pt-3 border-t border-ytBorder/50 flex justify-between items-center">
+                    <span class="text-xs text-gray-400">Show Top-Left Timers</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input id="toggleBadgesCheckbox" type="checkbox" checked class="sr-only peer">
+                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Audio & Text-to-Speech Settings -->
+            <div class="bg-ytCard border border-ytBorder rounded-xl p-4 shadow-md">
+                <h3 class="text-sm font-semibold text-gray-200 flex items-center gap-2 mb-2">
+                    <i class="fa-solid fa-volume-high text-emerald-400"></i> Voice Audio Reader
+                </h3>
+                <div class="space-y-2">
+                    <div class="flex gap-2">
+                        <select id="ttsVoiceSelect" class="w-full bg-gray-900 border border-ytBorder text-xs rounded-lg p-2 text-gray-200">
+                            <option value="">Default System Voice</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs text-gray-400">
+                        <label class="flex items-center gap-1">
+                            <input id="enableTtsCheckbox" type="checkbox" checked class="accent-red-600"> Read aloud while playing
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Video / Document Canvas & Player Panel -->
+        <section class="lg:col-span-8 bg-gray-950 flex flex-col justify-between overflow-hidden relative">
+            
+            <!-- Floating Top Toolbar for Player & Document Status -->
+            <div class="bg-ytDark/90 backdrop-blur-md border-b border-ytBorder p-3 flex flex-wrap items-center justify-between gap-3 z-30">
+                <div class="flex items-center gap-3">
+                    <!-- Play / Pause Buttons -->
+                    <button id="playPauseBtn" class="bg-red-600 hover:bg-red-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-lg shadow-red-600/30">
+                        <i id="playIcon" class="fa-solid fa-play ml-0.5"></i>
+                    </button>
+                    <button id="stopBtn" class="bg-gray-800 hover:bg-gray-700 text-gray-300 w-9 h-9 rounded-full flex items-center justify-center border border-gray-700 transition">
+                        <i class="fa-solid fa-square text-xs"></i>
+                    </button>
+
+                    <!-- Real-Time Master Timer Clock -->
+                    <div class="bg-gray-900 border border-ytBorder px-3 py-1.5 rounded-lg flex items-center gap-2">
+                        <i class="fa-solid fa-stopwatch text-red-500 text-xs"></i>
+                        <span id="masterClockDisplay" class="font-mono text-base font-bold text-red-400 min-w-[70px] text-center">00:00.0</span>
+                    </div>
+                </div>
+
+                <!-- Live Scrub Bar -->
+                <div class="flex-1 max-w-md mx-2 flex items-center gap-2">
+                    <span id="currentTimeText" class="text-xs font-mono text-gray-400">0s</span>
+                    <input id="playbackScrubber" type="range" min="0" max="100" value="0" step="0.1" class="w-full accent-red-600 bg-gray-800 h-2 rounded-lg cursor-pointer">
+                    <span id="totalTimeText" class="text-xs font-mono text-gray-400">0s</span>
+                </div>
+
+                <!-- Helper Actions -->
+                <div class="flex items-center gap-2">
+                    <button id="clearAllBtn" class="px-3 py-1.5 bg-gray-800 hover:bg-rose-950 text-gray-400 hover:text-rose-300 text-xs rounded-lg border border-gray-700 transition flex items-center gap-1">
+                        <i class="fa-solid fa-trash-can"></i> Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Interactive Document Canvas Canvas Container -->
+            <div id="docCanvasContainer" class="flex-1 overflow-y-auto p-6 md:p-10 flex flex-col items-center justify-start bg-gray-950 transition-colors duration-300">
+                
+                <!-- Document Paper / Overlay Frame -->
+                <div id="documentPaper" class="w-full max-w-4xl bg-ytDark border border-ytBorder rounded-2xl p-6 md:p-10 shadow-2xl transition-all duration-300 min-h-[500px] flex flex-col justify-between">
+                    
+                    <!-- Document Header -->
+                    <div class="border-b border-ytBorder/60 pb-4 mb-6 flex flex-wrap justify-between items-center gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
+                            <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                            <span id="docTitleLabel" class="ml-2 text-xs font-mono text-gray-400">yt_transcript_doc.vdoc</span>
+                        </div>
+                        <div class="text-xs font-mono text-gray-500 flex items-center gap-3">
+                            <span id="activeWordIndicator" class="text-red-400 font-semibold">Active: None</span>
+                            <span>|</span>
+                            <span id="badgeCountDisplay">0 items</span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Word Cards Wrapper (Render Target) -->
+                    <div id="wordCardsWrapper" class="flex flex-wrap gap-x-3 gap-y-5 items-start justify-start flex-1 transition-all">
+                        <!-- Word Cards Render Here Dynamically -->
+                    </div>
+
+                    <!-- Document Footer / Watermark -->
+                    <div class="mt-10 pt-4 border-t border-ytBorder/40 flex justify-between items-center text-xs text-gray-500">
+                        <span>Created with YouTube Word Document Studio</span>
+                        <span class="font-mono">Top-Left Timer Badge Sync</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Active Word Edit Modal Drawer / Popup -->
+            <div id="timeEditModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div class="bg-ytCard border border-ytBorder rounded-xl max-w-sm w-full p-5 shadow-2xl">
+                    <h3 class="text-sm font-bold text-gray-100 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-clock text-red-500"></i> Edit Word Timestamp
+                    </h3>
+                    <p class="text-xs text-gray-400 mb-4">Set exact start timestamp in seconds for: <span id="modalWordText" class="font-bold text-white bg-gray-800 px-2 py-0.5 rounded"></span></p>
+                    
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-gray-400 block mb-1">Start Time (Seconds)</label>
+                            <input id="modalTimeInput" type="number" step="0.1" min="0" class="w-full bg-gray-900 border border-ytBorder rounded-lg p-2 font-mono text-sm text-gray-100 focus:outline-none focus:border-red-500">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 mt-5">
+                        <button id="closeModalBtn" class="px-3 py-1.5 bg-gray-800 text-gray-300 text-xs rounded-lg hover:bg-gray-700">Cancel</button>
+                        <button id="saveModalBtn" class="px-4 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700">Save Time</button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+<section id="timeChopper">
+<h2>Time Word Chops — Fly onto Your Transcript</h2>
+<p>All 13 timing expressions are shown below with their exact meanings and examples. Choose a transcript word, then click any timing expression to fly its label onto that word.</p>
+<div class="tc-controls">
+<label>Target transcript word / phrase <select id="tcTarget" style="max-width:330px;min-width:210px"></select></label>
+<button class="tc-btn" id="tcPickMode" type="button" aria-pressed="false">Pick directly on transcript: OFF</button>
+<button class="tc-btn" id="tcClearFlights" type="button">Clear flying labels</button>
+<button class="tc-btn" id="tcImport" type="button">Use transcript text</button>
+</div>
+<div class="tc-hint" id="tcFlyStatus" role="status">Generate word cards above, then choose a target to attach a timing word.</div>
+<div class="tc-categories" id="tcCategories"></div>
+<div class="tc-controls">
+<label style="flex:1;min-width:250px">Text to chop<textarea id="tcText" placeholder="Write a sentence with by, within, before, expected, once before...">Once the fish is ready, chop it before 5 PM. It should finish within 30 minutes.</textarea></label>
+<button class="tc-btn" id="tcAnalyze" type="button">Chop into time clues</button>
+<button class="tc-btn" id="tcCopy" type="button">Copy results</button>
+</div>
+<div class="tc-hint" id="tcCount"></div>
+<div class="tc-results" id="tcResults" aria-live="polite"></div>
+</section>
+<style>
+#timeChopper .tc-pill{transition:transform .15s;background:#2c4d7e}
+#timeChopper .tc-pill:hover{transform:translateY(-2px)}
+#wordCardsWrapper .tc-chosen{outline:3px solid #facc15!important;outline-offset:3px}
+#wordCardsWrapper .tc-attached{position:relative;margin-bottom:24px}
+.tc-landed-tags{position:absolute;top:100%;left:0;display:flex;flex-wrap:wrap;gap:3px;min-width:180px;z-index:10;pointer-events:none}
+.tc-landed-tag{padding:2px 6px;border:1px solid #93c5fd;border-radius:6px;background:#173a64;color:#f0f9ff;font-size:10px;font-weight:700;box-shadow:0 3px 8px #0007}
+.tc-flying-label{position:fixed;z-index:99999;padding:7px 12px;border-radius:8px;border:2px solid #bfdbfe;color:white;background:#315da2;box-shadow:0 9px 24px #0009;pointer-events:none;white-space:nowrap;font-weight:800;font-size:14px;transition:transform .75s cubic-bezier(.2,.7,.2,1),opacity .75s;will-change:transform,opacity}
+
+#timeChopper .tc-word-entry{display:flex;align-items:flex-start;gap:10px;margin:10px 0;padding:9px;border:1px solid #405474;border-radius:10px;background:#172840}
+#timeChopper .tc-word-entry .tc-pill{flex:none;min-width:105px;text-align:center}
+#timeChopper .tc-word-description{display:flex;flex-direction:column;gap:3px;font-size:12px;line-height:1.45;color:#c7d8ed}
+#timeChopper .tc-word-description strong{color:#fff}
+#timeChopper .tc-word-description span{color:#aebed9}
+#timeChopper .tc-example{font-size:11px;color:#c4d3ed;margin-top:6px}
+#timeChopper .tc-target-note{color:#fde68a;font-weight:700}
+</style>
+<script>
+(function(){
+const categories=[
+ {title:'Deadline',why:'When something must finish',terms:[
+ {term:'By',meaning:'A deadline',example:'Finish by 5 PM.'},
+ {term:'Before',meaning:'Must finish earlier than a certain time',example:'Finish before 5 PM.'},
+ {term:'Due',meaning:'The deadline',example:'The report is due Friday.'}]},
+ {title:'Duration / time limit',why:'How long an action takes or how much time is allowed',terms:[
+ {term:'Within',meaning:'A time limit',example:'Finish within 30 minutes.'},
+ {term:'In',meaning:'Time remaining until completion',example:"It’ll finish in 10 minutes."}]},
+ {title:'Stopping point',why:'When an action stops',terms:[
+ {term:'Until',meaning:'When something stops',example:'Work until noon.'}]},
+ {title:'Sequence',why:'When one thing happens relative to another',terms:[
+ {term:'After',meaning:'Happens later than something else',example:'Start after lunch.'},
+ {term:'Once before',meaning:'A sequence combining once and before',example:'Once before the meeting, check the notes.'}]},
+ {title:'Prediction',why:'A predicted or uncertain completion time',terms:[
+ {term:'Estimated',meaning:'An approximate finishing time',example:'Estimated completion: 3 PM.'},
+ {term:'Expected',meaning:'When completion is predicted',example:'Expected to finish tomorrow.'},
+ {term:'Eventually',meaning:'Will happen later, but with no exact time',example:'It will eventually be finished.'}]},
+ {title:'Time left / urgency',why:'Remaining time or how close something is',terms:[
+ {term:'Remaining',meaning:'How much time is left',example:'Five minutes remaining.'},
+ {term:'Imminent',meaning:'About to happen very soon',example:'Completion is imminent.'}]}
+];
+const words=categories.flatMap(c=>c.terms.map(t=>({...t,category:c})));
+const targetSelect=document.getElementById('tcTarget');
+const status=document.getElementById('tcFlyStatus');
+const wrapper=document.getElementById('wordCardsWrapper');
+let chosenIndex=0,pickMode=false,latest=[];
+const attached=new Map();
+const matchPattern=/\bonce\s+before\b|\beventually\b|\bimminent\b|\bremaining\b|\bestimated\b|\bexpected\b|\bwithin\b|\bbefore\b|\bafter\b|\buntil\b|\bdue\b|\bby\b|\bin\b/gi;
+function getCards(){return [...wrapper.children].filter(c=>c.dataset.index!==undefined)}
+function refreshTargets(){
+ const cards=getCards(),old=String(chosenIndex);targetSelect.replaceChildren();
+ cards.forEach((card,i)=>{const option=document.createElement('option');option.value=i;option.textContent=(i+1)+'. '+(card.querySelector('span.text-gray-200')?.textContent||card.textContent||'Word');targetSelect.append(option)});
+ if(!cards.length){const o=document.createElement('option');o.textContent='Generate cards in transcript first';o.value='';targetSelect.append(o)}
+ chosenIndex=Math.max(0,Math.min(chosenIndex,cards.length-1));targetSelect.value=cards.length?String(chosenIndex):'';
+ cards.forEach((card,i)=>{card.classList.toggle('tc-chosen',i===chosenIndex);const labels=attached.get(i)||[];if(labels.length){card.classList.add('tc-attached');let slot=card.querySelector('.tc-landed-tags');if(!slot){slot=document.createElement('div');slot.className='tc-landed-tags';card.append(slot)}slot.replaceChildren();labels.forEach(x=>{const tag=document.createElement('span');tag.className='tc-landed-tag';tag.textContent=x;slot.append(tag)})}});
+}
+function choose(i){chosenIndex=i;refreshTargets();status.textContent='Selected word '+(i+1)+'. Click a time clue below to fly it onto this word.'}
+function fly(term,source){
+ refreshTargets();const dest=getCards()[chosenIndex];if(!dest){status.textContent='Generate transcript cards first.';return}
+ const from=source.getBoundingClientRect(),to=dest.getBoundingClientRect();
+ const tag=document.createElement('div');tag.className='tc-flying-label';tag.textContent=term;tag.style.left=(from.left)+'px';tag.style.top=(from.top)+'px';document.body.append(tag);
+ const dx=to.left-from.left+to.width/2-from.width/2,dy=to.top-from.top+to.height/2-from.height/2;
+ requestAnimationFrame(()=>{tag.style.transform='translate('+dx+'px,'+dy+'px) scale(.7)';tag.style.opacity='.4'});
+ setTimeout(()=>{tag.remove();const a=attached.get(chosenIndex)||[];a.push(term);attached.set(chosenIndex,a);refreshTargets()},800);
+ const c=words.find(x=>x.term.toLowerCase()===term.toLowerCase());status.textContent='“'+term+'” → '+(dest.querySelector('span.text-gray-200')?.textContent||dest.textContent)+' · '+(c?.meaning||'Time clue');
+}
+const root=document.getElementById('tcCategories');
+for(const c of categories){const panel=document.createElement('div');panel.className='tc-cat';const h=document.createElement('h3');h.textContent=c.title;const p=document.createElement('p');p.textContent=c.why;panel.append(h,p);for(const entry of c.terms){const block=document.createElement('div');block.className='tc-word-entry';const b=document.createElement('button');b.className='tc-pill';b.textContent='✦ '+entry.term;b.type='button';b.title='Fly '+entry.term+' onto your chosen transcript word';b.onclick=()=>fly(entry.term,b);const explanation=document.createElement('div');explanation.className='tc-word-description';const meaning=document.createElement('strong');meaning.textContent=entry.meaning;const example=document.createElement('span');example.textContent='Example: “'+entry.example+'”';explanation.append(meaning,example);block.append(b,explanation);panel.append(block)}root.append(panel)}
+wrapper.addEventListener('click',e=>{if(!pickMode)return;const card=e.target.closest('[data-index]');if(!card||!wrapper.contains(card))return;e.preventDefault();e.stopPropagation();choose(Number(card.dataset.index))},true);
+targetSelect.onchange=()=>choose(Number(targetSelect.value)||0);
+document.getElementById('tcPickMode').onclick=function(){pickMode=!pickMode;this.textContent='Pick directly on transcript: '+(pickMode?'ON':'OFF');this.setAttribute('aria-pressed',String(pickMode));status.textContent=pickMode?'Click a transcript word card above to choose it.':'Choose a target from the dropdown.'};
+document.getElementById('tcClearFlights').onclick=()=>{attached.clear();getCards().forEach(c=>{c.classList.remove('tc-attached');c.querySelector('.tc-landed-tags')?.remove()});refreshTargets();status.textContent='Flying word labels cleared.'};
+function analyze(){const text=document.getElementById('tcText').value;const out=document.getElementById('tcResults');out.replaceChildren();latest=[];for(const m of text.matchAll(matchPattern)){const c=words.find(x=>x.term.toLowerCase()===m[0].toLowerCase())?.category;if(!c)continue;const entry=words.find(x=>x.term.toLowerCase()===m[0].toLowerCase());const o={word:m[0],category:c.title,meaning:entry.meaning,example:entry.example};latest.push(o);const row=document.createElement('div');row.className='tc-result';const left=document.createElement('div');const strong=document.createElement('strong');strong.textContent=m[0]+' · '+c.title;const detail=document.createElement('div');detail.style.fontSize='12px';detail.style.color='#bbcae2';detail.textContent=o.meaning+' — '+o.example;left.append(strong,detail);const b=document.createElement('button');b.type='button';b.className='tc-btn';b.textContent='Fly onto chosen word';b.onclick=()=>fly(m[0],b);row.append(left,b);out.append(row)}document.getElementById('tcCount').textContent=latest.length+' time clue(s) identified. Click Fly to attach any result to a transcript word.';if(!latest.length)out.textContent='No time clues found. Try “by”, “within”, “expected”, or “once before”.'}
+document.getElementById('tcAnalyze').onclick=analyze;
+document.getElementById('tcImport').onclick=()=>{document.getElementById('tcText').value=document.getElementById('textInput').value;analyze()};
+document.getElementById('tcCopy').onclick=()=>{const s=latest.map(x=>x.word+' | '+x.category+' | '+x.meaning).join('\n');if(s)navigator.clipboard?.writeText(s)};
+// Watch for regenerated or re-styled transcript cards, without recursively reacting to our labels.
+let prevSignature='';setInterval(()=>{const cards=getCards();const signature=cards.length+'|'+cards.map(c=>c.dataset.id).join('|');if(signature!==prevSignature){prevSignature=signature;attached.clear();refreshTargets()}},550);
+analyze();refreshTargets();
+})();
+</script>
+
+    <section class="time-division" id="timeDivisionSection">
+      <h2>5. Division of Time — Word Timeline</h2>
+      <p>Divide the transcript into equal time intervals. See which words belong to each division, and edit each word's estimated duration or start time.</p>
+      <div class="div-controls">
+        <label>Divide every <input id="divisionAmount" type="number" min="0.01" step="0.5" value="5"></label>
+        <label>Time unit <select id="divisionUnit"><option value="0.001">Milliseconds</option><option value="1" selected>Seconds</option><option value="60">Minutes</option><option value="3600">Hours</option></select></label>
+        <button id="divisionReflow" type="button">Reflow word timings</button>
+        <button id="divisionCSV" type="button">Export timings CSV</button>
+        <span class="div-total" id="divisionSummary">0 divisions</span>
+      </div>
+      <div class="div-grid">
+        <div class="div-panel"><h3>Time divisions</h3><div class="div-table-wrap"><table class="div-table"><thead><tr><th>Division</th><th>Words starting here</th></tr></thead><tbody id="divisionBins"></tbody></table></div></div>
+        <div class="div-panel"><h3>Individual word / phrase timing</h3><p class="div-note">Change a duration to update that word and all later start/finish times. A start-time edit shifts that word and later words.</p><div class="div-table-wrap"><table class="div-table"><thead><tr><th>#</th><th>Word / phrase</th><th>Start (s)</th><th>Duration (s)</th><th>Finish (s)</th><th>Division</th></tr></thead><tbody id="divisionWords"></tbody></table></div></div>
+      </div>
+    </section>
+
+
+
+<style>
+#timeChopper{background:#101b2d;color:#e5efff;padding:28px clamp(16px,4vw,50px);border-top:2px solid #52678a;font-family:Inter,system-ui,sans-serif}
+#timeChopper *{box-sizing:border-box}
+#timeChopper h2{font-size:22px;font-weight:750;margin:0 0 8px}
+#timeChopper p{color:#adbedb;font-size:14px;line-height:1.5;margin:6px 0 16px}
+.tc-controls{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.tc-controls label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#c2d3ef}
+.tc-controls select,.tc-controls textarea{background:#0b1323;color:#fff;border:1px solid #52678a;padding:10px;border-radius:8px}
+.tc-controls textarea{min-width:220px;flex:1;min-height:90px;resize:vertical}
+.tc-btn{padding:10px 13px;border-radius:8px;border:1px solid #58769e;background:#263f64;color:#fff;cursor:pointer}
+.tc-btn:hover{background:#375780}
+.tc-categories{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:14px 0}
+.tc-cat{background:#192b45;border:1px solid #3c5478;border-radius:12px;padding:12px;min-height:108px}
+.tc-cat h3{font-weight:750;font-size:15px;margin:0 0 7px}
+.tc-cat p{font-size:12px;color:#b9c8e0;margin:0 0 8px}
+.tc-pill{display:inline-flex;gap:6px;align-items:center;border-radius:6px;background:#334f73;padding:6px 8px;margin:3px;font-size:12px;border:1px solid #6282ae;cursor:pointer;color:white}
+.tc-pill:hover{background:#4a6d9e}
+.tc-pill small{opacity:.8}
+.tc-results{max-height:340px;overflow:auto;background:#0b1527;border:1px solid #395173;border-radius:10px;padding:10px}
+.tc-result{padding:10px;border-bottom:1px solid #273956;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.tc-result:last-child{border:0}
+.tc-result strong{color:#e3eeff}
+.tc-result span{font-size:12px;color:#b2c5e2}
+.tc-hint{font-size:12px;color:#a7bad7}
+#fishSection{background:#0b1424;padding:24px 18px;border-top:2px solid #405b80}
+#fishSection h2{color:#eaf2ff;font-size:21px;font-weight:700;max-width:1100px;margin:0 auto 8px}
+#fishSection p{color:#9eb2ce;max-width:1100px;margin:0 auto 14px}
+#fishEmbedded{display:block;width:100%;min-height:930px;border:0;border-radius:14px;background:#0e1726}
+</style>
+
+
+
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 border border-ytBorder text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-3 translate-y-20 opacity-0 transition-all duration-300 z-50 text-xs">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+        <span id="toastMessage">Action completed</span>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // State Management
+        let wordItems = []; // [{ id, text, startTime, duration }]
+        let isPlaying = false;
+        let currentTime = 0;
+        let animationFrameId = null;
+        let lastTimestamp = null;
+        let editingItemId = null;
+        let synth = window.speechSynthesis;
+
+        // Default Sample Content
+        const sampleText = "Welcome back to the channel. Today we are exploring how to create interactive word document transcripts with top left timers for YouTube videos and video editors.";
+
+        // DOM Elements
+        const textInput = document.getElementById('textInput');
+        const processTextBtn = document.getElementById('processTextBtn');
+        const groupingMode = document.getElementById('groupingMode');
+        const wordCardsWrapper = document.getElementById('wordCardsWrapper');
+        const wordCountLabel = document.getElementById('wordCountLabel');
+        const badgeCountDisplay = document.getElementById('badgeCountDisplay');
+        const wpmSlider = document.getElementById('wpmSlider');
+        const wpmValueDisplay = document.getElementById('wpmValueDisplay');
+        const estimatedTimeDisplay = document.getElementById('estimatedTimeDisplay');
+        const startDelayInput = document.getElementById('startDelayInput');
+        const applyAutoTimersBtn = document.getElementById('applyAutoTimersBtn');
+        const resetTimersBtn = document.getElementById('resetTimersBtn');
+        const timerFormatSelect = document.getElementById('timerFormatSelect');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playIcon = document.getElementById('playIcon');
+        const stopBtn = document.getElementById('stopBtn');
+        const masterClockDisplay = document.getElementById('masterClockDisplay');
+        const playbackScrubber = document.getElementById('playbackScrubber');
+        const currentTimeText = document.getElementById('currentTimeText');
+        const totalTimeText = document.getElementById('totalTimeText');
+        const activeWordIndicator = document.getElementById('activeWordIndicator');
+        const docLayoutSelect = document.getElementById('docLayoutSelect');
+        const fontSizeSelect = document.getElementById('fontSizeSelect');
+        const badgeColorSelect = document.getElementById('badgeColorSelect');
+        const highlightEffectSelect = document.getElementById('highlightEffectSelect');
+        const toggleBadgesCheckbox = document.getElementById('toggleBadgesCheckbox');
+        const documentPaper = document.getElementById('documentPaper');
+        const timeEditModal = document.getElementById('timeEditModal');
+        const modalWordText = document.getElementById('modalWordText');
+        const modalTimeInput = document.getElementById('modalTimeInput');
+        const saveModalBtn = document.getElementById('saveModalBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const quickSampleBtn = document.getElementById('quickSampleBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const exportJsonBtn = document.getElementById('exportJsonBtn');
+        const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        const ttsVoiceSelect = document.getElementById('ttsVoiceSelect');
+        const enableTtsCheckbox = document.getElementById('enableTtsCheckbox');
+
+        // Initial Setup
+        window.addEventListener('DOMContentLoaded', () => {
+            textInput.value = sampleText;
+            populateVoices();
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = populateVoices;
+            }
+            processText();
+            updateWpmEstimate();
+        });
+
+        // Speech Synthesis Voices
+        function populateVoices() {
+            if (!synth) return;
+            const voices = synth.getVoices();
+            ttsVoiceSelect.innerHTML = '<option value="">Default System Voice</option>';
+            voices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                ttsVoiceSelect.appendChild(option);
+            });
+        }
+
+        // Parse Words / Text into Card Objects
+        function processText() {
+            const rawText = textInput.value.trim();
+            if (!rawText) {
+                wordItems = [];
+                renderCards();
+                updateStats();
+                return;
+            }
+
+            const mode = groupingMode.value;
+            let chunks = [];
+
+            if (mode === 'single') {
+                chunks = rawText.split(/\s+/);
+            } else if (mode === 'pairs') {
+                const words = rawText.split(/\s+/);
+                for (let i = 0; i < words.length; i += 2) {
+                    chunks.push(words.slice(i, i + 2).join(' '));
+                }
+            } else if (mode === 'triplets') {
+                const words = rawText.split(/\s+/);
+                for (let i = 0; i < words.length; i += 3) {
+                    chunks.push(words.slice(i, i + 3).join(' '));
+                }
+            } else if (mode === 'sentences') {
+                chunks = rawText.match(/[^.!?]+[.!?]+|\s*[^.!?]+/g) || [rawText];
+                chunks = chunks.map(c => c.trim()).filter(Boolean);
+            }
+
+            // Map into word items preserving or recalculating timestamps
+            const wpm = parseInt(wpmSlider.value, 10);
+            const startDelay = parseFloat(startDelayInput.value) || 0;
+            const totalWords = rawText.split(/\s+/).length;
+            const secondsPerWord = 60 / wpm;
+
+            let runningTime = startDelay;
+
+            wordItems = chunks.map((chunk, index) => {
+                const wordCountInChunk = chunk.split(/\s+/).length;
+                const duration = wordCountInChunk * secondsPerWord;
+                const item = {
+                    id: 'word-' + index + '-' + Date.now(),
+                    text: chunk,
+                    startTime: runningTime,
+                    duration: duration
+                };
+                runningTime += duration;
+                return item;
+            });
+
+            renderCards();
+            updateStats();
+            showToast('Generated ' + wordItems.length + ' word cards!');
+        }
+
+        // Format Seconds into Selected Timer Style
+        function formatTimerDisplay(seconds) {
+            const mode = timerFormatSelect.value;
+            if (seconds < 0) seconds = 0;
+
+            if (mode === 'sec') {
+                return seconds.toFixed(1) + 's';
+            } else if (mode === 'mss') {
+                const mins = Math.floor(seconds / 60);
+                const secs = (seconds % 60).toFixed(1);
+                return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            } else if (mode === 'frames') {
+                const frames = Math.floor(seconds * 30);
+                return `f:${frames}`;
+            } else {
+                // Default MM:SS
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+        }
+
+        // Color Badge Classes
+        function getBadgeBgClass() {
+            const color = badgeColorSelect.value;
+            switch (color) {
+                case 'blue': return 'bg-blue-600 text-white';
+                case 'emerald': return 'bg-emerald-600 text-white';
+                case 'purple': return 'bg-purple-600 text-white';
+                case 'dark': return 'bg-gray-800 text-gray-300 border border-gray-700';
+                default: return 'bg-red-600 text-white';
+            }
+        }
+
+        // Render Cards inside Document Canvas Area
+        function renderCards() {
+            wordCardsWrapper.innerHTML = '';
+
+            if (wordItems.length === 0) {
+                wordCardsWrapper.innerHTML = `
+                    <div class="w-full text-center py-16 text-gray-500">
+                        <i class="fa-solid fa-file-lines text-4xl mb-3 opacity-40"></i>
+                        <p class="text-sm">No word document cards generated yet.</p>
+                        <p class="text-xs mt-1">Type text on the left panel and click "Generate Cards".</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const fontSize = fontSizeSelect.value;
+            const badgeClass = getBadgeBgClass();
+            const showBadges = toggleBadgesCheckbox.checked;
+
+            wordItems.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.dataset.id = item.id;
+                card.dataset.index = index;
+                
+                // Base structure & styles for timer badge positioned top-left
+                card.className = `relative group inline-flex items-center pt-3 pb-1.5 px-2.5 my-1 rounded-lg border border-gray-800 bg-gray-900/90 hover:border-gray-600 transition-all cursor-pointer ${fontSize}`;
+
+                // Top Left Timer Badge
+                const badge = document.createElement('span');
+                badge.className = `absolute -top-2.5 -left-1.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold shadow-md select-none transition-all ${badgeClass} ${showBadges ? 'block' : 'hidden'}`;
+                badge.innerText = formatTimerDisplay(item.startTime);
+                badge.title = 'Click to edit timestamp';
+
+                // Allow clicking badge directly to edit time
+                badge.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openEditModal(item);
+                });
+
+                // Text node inside card
+                const textSpan = document.createElement('span');
+                textSpan.className = "text-gray-200 select-text font-medium leading-relaxed";
+                textSpan.innerText = item.text;
+
+                // Card Click -> Seek Video Player to timestamp
+                card.addEventListener('click', () => {
+                    seekToTime(item.startTime);
+                });
+
+                card.appendChild(badge);
+                card.appendChild(textSpan);
+                wordCardsWrapper.appendChild(card);
+            });
+
+            applyLayoutMode();
+            updateActiveCardHighlight();
+        }
+
+        // Layout Mode Adjustments
+        function applyLayoutMode() {
+            const layout = docLayoutSelect.value;
+            wordCardsWrapper.className = 'transition-all';
+
+            if (layout === 'grid') {
+                wordCardsWrapper.classList.add('grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'gap-4', 'items-stretch');
+            } else if (layout === 'teleprompter') {
+                wordCardsWrapper.classList.add('flex', 'flex-col', 'gap-3', 'max-w-2xl', 'mx-auto');
+            } else if (layout === 'document') {
+                wordCardsWrapper.classList.add('flex', 'flex-wrap', 'gap-x-2', 'gap-y-4', 'leading-loose');
+                documentPaper.classList.add('bg-gray-900', 'text-gray-100');
+            } else {
+                // Default Flex-wrap Flow
+                wordCardsWrapper.classList.add('flex', 'flex-wrap', 'gap-x-3', 'gap-y-4', 'items-start');
+            }
+        }
+
+        // Active Card Visual Highlight during Playback
+        function updateActiveCardHighlight() {
+            if (wordItems.length === 0) return;
+
+            const effect = highlightEffectSelect.value;
+            let activeFound = null;
+
+            wordItems.forEach((item, index) => {
+                const card = wordCardsWrapper.children[index];
+                if (!card) return;
+
+                const isActive = currentTime >= item.startTime && 
+                                 (index === wordItems.length - 1 || currentTime < wordItems[index + 1].startTime);
+
+                // Clear styling classes
+                card.classList.remove('ring-2', 'ring-red-500', 'bg-red-600/20', 'border-red-500', 'word-card-active', 'bg-amber-500/20', 'border-amber-500');
+
+                if (isActive) {
+                    activeFound = item;
+                    if (effect === 'glow') {
+                        card.classList.add('word-card-active', 'border-red-500', 'bg-red-950/40');
+                    } else if (effect === 'box') {
+                        card.classList.add('ring-2', 'ring-red-500', 'bg-red-600/30', 'border-red-400');
+                    } else { // Underline
+                        card.classList.add('border-b-4', 'border-b-red-500', 'bg-gray-800');
+                    }
+                    
+                    // Auto scroll active element into view if playing
+                    if (isPlaying) {
+                        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+            });
+
+            if (activeFound) {
+                activeWordIndicator.innerText = `Active: "${activeFound.text.substring(0, 15)}${activeFound.text.length > 15 ? '...' : ''}"`;
+            } else {
+                activeWordIndicator.innerText = "Active: None";
+            }
+        }
+
+        // Stats & Time Calculations
+        function updateStats() {
+            const rawText = textInput.value.trim();
+            const words = rawText ? rawText.split(/\s+/).length : 0;
+            wordCountLabel.innerText = `${words} word${words !== 1 ? 's' : ''}`;
+            badgeCountDisplay.innerText = `${wordItems.length} card${wordItems.length !== 1 ? 's' : ''}`;
+            updateWpmEstimate();
+        }
+
+        function updateWpmEstimate() {
+            const wpm = parseInt(wpmSlider.value, 10);
+            wpmValueDisplay.innerText = wpm;
+
+            const rawText = textInput.value.trim();
+            const words = rawText ? rawText.split(/\s+/).length : 0;
+            const totalSeconds = (words / wpm) * 60;
+
+            estimatedTimeDisplay.innerText = formatTimerDisplay(totalSeconds);
+            
+            // Set max on playback scrubber
+            const totalDocTime = wordItems.length > 0 ? wordItems[wordItems.length - 1].startTime + wordItems[wordItems.length - 1].duration : totalSeconds;
+            playbackScrubber.max = totalDocTime || 10;
+            totalTimeText.innerText = (totalDocTime || 0).toFixed(1) + 's';
+        }
+
+        // Auto Apply Timers based on WPM Slider
+        function applyAutoTimers() {
+            const wpm = parseInt(wpmSlider.value, 10);
+            const startDelay = parseFloat(startDelayInput.value) || 0;
+            const secondsPerWord = 60 / wpm;
+
+            let runningTime = startDelay;
+
+            wordItems.forEach(item => {
+                const wordCount = item.text.split(/\s+/).length;
+                const duration = wordCount * secondsPerWord;
+                item.startTime = runningTime;
+                item.duration = duration;
+                runningTime += duration;
+            });
+
+            renderCards();
+            updateWpmEstimate();
+            showToast('Updated timestamps based on ' + wpm + ' WPM');
+        }
+
+        // Reset Timers
+        function resetTimers() {
+            wordItems.forEach(item => {
+                item.startTime = 0;
+            });
+            renderCards();
+            showToast('Reset all word timers to 0s');
+        }
+
+        // Playback Engine
+        function togglePlayPause() {
+            if (isPlaying) {
+                pausePlayback();
+            } else {
+                startPlayback();
+            }
+        }
+
+        function startPlayback() {
+            if (wordItems.length === 0) return;
+            isPlaying = true;
+            playIcon.className = "fa-solid fa-pause";
+            playPauseBtn.classList.replace('bg-red-600', 'bg-amber-600');
+            lastTimestamp = performance.now();
+
+            // Speech Synthesis check
+            if (enableTtsCheckbox.checked && synth) {
+                speakCurrentFromTime(currentTime);
+            }
+
+            animationFrameId = requestAnimationFrame(playbackLoop);
+        }
+
+        function pausePlayback() {
+            isPlaying = false;
+            playIcon.className = "fa-solid fa-play ml-0.5";
+            playPauseBtn.classList.replace('bg-amber-600', 'bg-red-600');
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (synth) synth.cancel();
+        }
+
+        function stopPlayback() {
+            pausePlayback();
+            currentTime = 0;
+            updateClockUI();
+            updateActiveCardHighlight();
+        }
+
+        function playbackLoop(timestamp) {
+            if (!isPlaying) return;
+
+            const delta = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            currentTime += delta;
+
+            const maxTime = parseFloat(playbackScrubber.max) || 0;
+            if (currentTime >= maxTime) {
+                currentTime = maxTime;
+                updateClockUI();
+                updateActiveCardHighlight();
+                pausePlayback();
+                return;
+            }
+
+            updateClockUI();
+            updateActiveCardHighlight();
+            animationFrameId = requestAnimationFrame(playbackLoop);
+        }
+
+        function updateClockUI() {
+            masterClockDisplay.innerText = formatTimerDisplay(currentTime);
+            playbackScrubber.value = currentTime;
+            currentTimeText.innerText = currentTime.toFixed(1) + 's';
+        }
+
+        function seekToTime(time) {
+            currentTime = parseFloat(time);
+            updateClockUI();
+            updateActiveCardHighlight();
+
+            if (isPlaying && enableTtsCheckbox.checked && synth) {
+                synth.cancel();
+                speakCurrentFromTime(currentTime);
+            }
+        }
+
+        // TTS Read Aloud Helper
+        function speakCurrentFromTime(time) {
+            if (!synth) return;
+            // Find remaining text from current timestamp
+            const remaining = wordItems.filter(i => i.startTime >= time).map(i => i.text).join(' ');
+            if (!remaining) return;
+
+            const utterance = new SpeechSynthesisUtterance(remaining);
+            const selectedVoiceIndex = ttsVoiceSelect.value;
+            if (selectedVoiceIndex !== "") {
+                const voices = synth.getVoices();
+                utterance.voice = voices[selectedVoiceIndex];
+            }
+            
+            // Adjust rate to WPM roughly
+            const wpm = parseInt(wpmSlider.value, 10);
+            utterance.rate = wpm / 150; // Standard speech is ~150 WPM
+            synth.speak(utterance);
+        }
+
+        // Modal Timestamp Editor
+        function openEditModal(item) {
+            editingItemId = item.id;
+            modalWordText.innerText = `"${item.text}"`;
+            modalTimeInput.value = item.startTime.toFixed(2);
+            timeEditModal.classList.remove('hidden');
+        }
+
+        function saveModalTime() {
+            if (!editingItemId) return;
+            const newTime = parseFloat(modalTimeInput.value);
+            if (isNaN(newTime) || newTime < 0) return;
+
+            const item = wordItems.find(i => i.id === editingItemId);
+            if (item) {
+                item.startTime = newTime;
+                // Re-sort items by startTime
+                wordItems.sort((a, b) => a.startTime - b.startTime);
+                renderCards();
+                showToast('Updated timestamp');
+            }
+            closeModal();
+        }
+
+        function closeModal() {
+            timeEditModal.classList.add('hidden');
+            editingItemId = null;
+        }
+
+        // Export Functions
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(wordItems, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "youtube_transcript_timers.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('Exported Transcript JSON!');
+        }
+
+        function exportHTMLPrint() {
+            window.print();
+        }
+
+        // UI Notification Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // Theme Toggle (Dark/Light Mode)
+        function toggleTheme() {
+            const isDark = document.body.classList.contains('bg-gray-900');
+            const themeLabel = document.getElementById('themeLabel');
+
+            if (isDark) {
+                document.body.classList.replace('bg-gray-900', 'bg-gray-100');
+                document.body.classList.replace('text-gray-100', 'text-gray-900');
+                documentPaper.classList.replace('bg-ytDark', 'bg-white');
+                documentPaper.classList.replace('border-ytBorder', 'border-gray-300');
+                themeLabel.innerText = "Light";
+                showToast('Switched to Light Theme');
+            } else {
+                document.body.classList.replace('bg-gray-100', 'bg-gray-900');
+                document.body.classList.replace('text-gray-900', 'text-gray-100');
+                documentPaper.classList.replace('bg-white', 'bg-ytDark');
+                documentPaper.classList.replace('border-gray-300', 'border-ytBorder');
+                themeLabel.innerText = "Dark";
+                showToast('Switched to Dark Theme');
+            }
+        }
+
+        // Event Listeners
+        processTextBtn.addEventListener('click', processText);
+        wpmSlider.addEventListener('input', updateWpmEstimate);
+        applyAutoTimersBtn.addEventListener('click', applyAutoTimers);
+        resetTimersBtn.addEventListener('click', resetTimers);
+        timerFormatSelect.addEventListener('change', renderCards);
+        badgeColorSelect.addEventListener('change', renderCards);
+        fontSizeSelect.addEventListener('change', renderCards);
+        highlightEffectSelect.addEventListener('change', updateActiveCardHighlight);
+        toggleBadgesCheckbox.addEventListener('change', renderCards);
+        docLayoutSelect.addEventListener('change', applyLayoutMode);
+
+        playPauseBtn.addEventListener('click', togglePlayPause);
+        stopBtn.addEventListener('click', stopPlayback);
+        playbackScrubber.addEventListener('input', (e) => seekToTime(e.target.value));
+
+        saveModalBtn.addEventListener('click', saveModalTime);
+        closeModalBtn.addEventListener('click', closeModal);
+
+        quickSampleBtn.addEventListener('click', () => {
+            textInput.value = "Creating YouTube video transcripts with word document cards and timestamps makes video editing, subtitling, and voice syncing effortless.";
+            processText();
+        });
+
+        clearAllBtn.addEventListener('click', () => {
+            textInput.value = '';
+            wordItems = [];
+            renderCards();
+            updateStats();
+            stopPlayback();
+            showToast('Cleared workspace');
+        });
+
+        exportJsonBtn.addEventListener('click', exportJSON);
+        exportHtmlBtn.addEventListener('click', exportHTMLPrint);
+        themeToggleBtn.addEventListener('click', toggleTheme);
+
+        // Keyboard Shortcut Controls
+        document.addEventListener('keydown', (e) => {
+            // Spacebar for play/pause if not typing in text area or input
+            if (e.code === 'Space' && document.activeElement !== textInput && document.activeElement !== modalTimeInput) {
+                e.preventDefault();
+                togglePlayPause();
+            }
+        });
+
+
+        // Editable time divisions and per-word start / finish estimates.
+        const divisionAmount = document.getElementById('divisionAmount');
+        const divisionUnit = document.getElementById('divisionUnit');
+        const divisionBins = document.getElementById('divisionBins');
+        const divisionWords = document.getElementById('divisionWords');
+        const safeTime = n => Math.max(0, Number(n) || 0);
+        const fmtDivTime = n => safeTime(n).toFixed(2) + 's';
+        function getInterval() { return Math.max(.001, safeTime(divisionAmount.value) * Number(divisionUnit.value) || 5); }
+        function reflowWordTimes(from = 0) {
+            if (!wordItems.length) return;
+            for (let i = Math.max(1,from); i < wordItems.length; i++) {
+                wordItems[i].startTime = wordItems[i-1].startTime + safeTime(wordItems[i-1].duration);
+            }
+            renderCards(); updateWpmEstimate(); updateClockUI(); renderTimeDivision();
+        }
+        function renderTimeDivision() {
+            if (!divisionBins || !divisionWords) return;
+            divisionBins.replaceChildren(); divisionWords.replaceChildren();
+            const interval = getInterval();
+            const total = wordItems.reduce((m,w) => Math.max(m,safeTime(w.startTime)+safeTime(w.duration)),0);
+            const bins = new Map();
+            wordItems.forEach((item,index) => {
+                const bucket = Math.floor((safeTime(item.startTime)+1e-9)/interval);
+                if(!bins.has(bucket)) bins.set(bucket,[]);
+                bins.get(bucket).push(item.text);
+                const tr=document.createElement('tr');
+                const c=(txt)=>{const td=document.createElement('td');td.textContent=txt;tr.append(td);return td};
+                c(index+1);c(item.text);
+                const startTd=document.createElement('td'); const startInput=document.createElement('input');
+                startInput.type='number';startInput.min='0';startInput.step='.1';startInput.value=safeTime(item.startTime).toFixed(2);
+                startInput.title='Set this start time; subsequent words will shift';
+                startInput.addEventListener('change',()=>{const n=Number(startInput.value);if(!Number.isFinite(n)||n<0){renderTimeDivision();return}item.startTime=n;reflowWordTimes(index+1)});
+                startTd.append(startInput);tr.append(startTd);
+                const durTd=document.createElement('td');const durInput=document.createElement('input');
+                durInput.type='number';durInput.min='.01';durInput.step='.1';durInput.value=safeTime(item.duration).toFixed(2);
+                durInput.addEventListener('change',()=>{const n=Number(durInput.value);if(!Number.isFinite(n)||n<=0){renderTimeDivision();return}item.duration=n;reflowWordTimes(index+1)});
+                durTd.append(durInput);tr.append(durTd);
+                c(fmtDivTime(safeTime(item.startTime)+safeTime(item.duration)));c('#'+(bucket+1));
+                divisionWords.append(tr);
+            });
+            [...bins.entries()].sort((a,b)=>a[0]-b[0]).forEach(([bucket,words])=>{
+                const row=document.createElement('tr'),a=document.createElement('td'),b=document.createElement('td');
+                a.textContent=fmtDivTime(bucket*interval)+' – '+fmtDivTime((bucket+1)*interval);
+                b.textContent=words.join(' · ');row.append(a,b);divisionBins.append(row);
+            });
+            if(!wordItems.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=2;td.textContent='Generate word cards to see the time divisions.';tr.append(td);divisionBins.append(tr)}
+            document.getElementById('divisionSummary').textContent=bins.size+' occupied divisions · '+wordItems.length+' cards · '+fmtDivTime(total)+' total';
+        }
+        divisionAmount.addEventListener('input',renderTimeDivision);
+        divisionUnit.addEventListener('change',renderTimeDivision);
+        document.getElementById('divisionReflow').addEventListener('click',()=>reflowWordTimes(1));
+        document.getElementById('divisionCSV').addEventListener('click',()=>{
+            const esc=v=>'"'+String(v).replaceAll('"','""')+'"';
+            const interval=getInterval();const data=[['Index','Word/Phrase','Start Seconds','Duration Seconds','Finish Seconds','Division']];
+            wordItems.forEach((w,i)=>data.push([i+1,w.text,safeTime(w.startTime),safeTime(w.duration),safeTime(w.startTime)+safeTime(w.duration),Math.floor(safeTime(w.startTime)/interval)+1]));
+            const blob=new Blob([data.map(row=>row.map(esc).join(',')).join('\r\n')],{type:'text/csv'});
+            const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='division-of-time.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        });
+        // Refresh the new view whenever existing transcript actions alter card timings.
+        const originalRenderCards=renderCards;
+        renderCards=function(){originalRenderCards();renderTimeDivision();};
+        renderTimeDivision();
+    </script>
+
+<!-- Integrated Word Backlog + Word Being; iframe isolates styles and controls. -->
+<section id="wordBeingWorkspace" style="padding:24px 18px 38px;background:#0b1020;color:#f8fafc;border-top:2px solid #475569;">
+  <div style="max-width:1350px;margin:0 auto 14px;">
+    <h2 style="font-size:22px;font-weight:700;margin:0 0 6px;">Word Backlog + Word Being</h2>
+    <p style="font-size:14px;color:#aab8d1;margin:0;">Paste words, place them on the man, and edit the stacked word timing cubes below.</p>
+  </div>
+  <iframe id="wordBeingEmbedded" title="Word Backlog and Word Being interactive workspace" style="display:block;width:100%;border:0;border-radius:14px;background:#0c1220;min-height:1080px;" scrolling="no" srcdoc="&lt;!DOCTYPE html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;UTF-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;&lt;title&gt;Word Backlog + Word Being&lt;/title&gt;&lt;style&gt;
+:root{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#0c1220;color:#ecf1ff}*{box-sizing:border-box}body{margin:0;padding:24px}main{max-width:1350px;margin:auto}h1{margin:0;font-size:28px}p{color:#a9b9d7}h2{font-size:17px;margin:0 0 12px}.layout{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-top:20px}.panel{background:#172136;border:1px solid #32435f;border-radius:16px;padding:17px;min-width:0}textarea,input,select{background:#0c1629;color:white;border:1px solid #475a7b;border-radius:9px;padding:10px;font:inherit;max-width:100%}textarea{width:100%;height:170px;resize:vertical}button{background:#334b78;border:1px solid #5472a9;color:white;padding:9px 12px;border-radius:9px;cursor:pointer}button:hover{background:#49679e}.primary{background:#5474e6}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.hint{font-size:12px;color:#aab8d1}.groups{max-height:220px;overflow:auto;display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.group{font-size:12px;text-align:left}.group.active{background:#806ad2;border-color:#af9bff}.scroll{max-height:340px;overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{border-bottom:1px solid #344660;padding:9px;text-align:left;vertical-align:top}th{color:#bdcbe6}td{overflow-wrap:anywhere}.word{background:#243c62;font-size:12px;margin:2px;padding:5px 8px}.word.selected{background:#806ad2}.being{height:440px;position:relative;border-radius:14px;background:radial-gradient(circle at 50% 43%,#263e61,#0d172a 78%);overflow:hidden;margin:12px 0}.part{position:absolute;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:2px solid #8ca7ee;background:#293f69;color:#fff;cursor:pointer;padding:7px;overflow:hidden;overflow-wrap:anywhere;font-size:11px}.part strong{font-size:11px;opacity:.75;margin-bottom:3px}.part span{font-size:12px;max-height:78%;overflow:auto}.part:hover{filter:brightness(1.22);border-color:#ffde78}.part.active{border-color:#ffe393;background:#465f93;box-shadow:0 0 0 3px #e7cc6d55}.head{width:118px;height:97px;border-radius:50%;left:calc(50% - 59px);top:15px;z-index:3}.torso{width:164px;height:155px;border-radius:28px;left:calc(50% - 82px);top:125px;z-index:2}.armL,.armR{width:77px;height:158px;top:128px;border-radius:33px}.armL{left:calc(50% - 167px);transform:rotate(10deg)}.armR{left:calc(50% + 90px);transform:rotate(-10deg)}.legL,.legR{width:73px;height:148px;top:287px;border-radius:26px}.legL{left:calc(50% - 80px)}.legR{left:calc(50% + 8px)}.token{display:inline-block;background:#304a71;border:1px solid #5a78a9;border-radius:8px;margin:3px;padding:7px;cursor:pointer}.token.active{background:#806ad2}.picked{outline:2px solid #ffe393!important;background:#806ad2!important}.insertbox{background:#101c32;border:1px solid #6383bf;border-radius:12px;padding:12px;margin:10px 0}.insertbox input{width:100%}.selectedword{color:#ffe393;font-weight:700;min-height:26px;overflow-wrap:anywhere}.part{transition:filter .15s}.muted{color:#9eafd0}.status{min-height:20px;font-size:12px;color:#d4ccff}.footer{display:flex;gap:8px;flex-wrap:wrap}.section{margin-top:18px}@media(max-width:1050px){.layout{grid-template-columns:1fr 1fr}.layout&gt;.panel:last-child{grid-column:1/-1}}@media(max-width:650px){body{padding:12px}.layout{grid-template-columns:1fr}.layout&gt;.panel:last-child{grid-column:auto}}
+
+/* Stacked timing cubes */
+.cube-panel{margin-top:20px;background:#172136;border:1px solid #32435f;border-radius:16px;padding:20px}
+.cube-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0 20px}
+.cube-controls input{width:95px}.cube-controls label{font-size:13px;color:#c6d3ef}
+.cube-stack{display:flex;flex-direction:column;gap:0;max-height:620px;overflow-y:auto;padding:12px 14px 20px 9px}
+.cube-row{display:flex;align-items:center;gap:15px;min-height:92px;position:relative}
+.cube-row:not(:last-child)::after{content:&quot;&quot;;position:absolute;left:59px;top:73px;bottom:-17px;border-left:2px dashed #526a91}
+.cube-index{font:12px monospace;color:#aab8d1;min-width:28px;text-align:right}
+.time-cube{position:relative;min-height:72px;flex:1;max-width:740px;background:linear-gradient(145deg,#344e82,#25385d);border:1px solid #9bb6eb;border-radius:8px;padding:12px 18px;box-shadow:7px 7px 0 #101b30,9px 9px 0 #526b99;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.time-cube:before{content:&quot;&quot;;position:absolute;top:-7px;left:7px;right:-7px;height:7px;background:#6c8ed0;clip-path:polygon(0 100%,8px 0,100% 0,calc(100% - 8px) 100%);border-radius:2px}
+.cube-word{font-weight:700;font-size:16px;overflow-wrap:anywhere;min-width:100px;flex:1}
+.cube-time{font:12px ui-monospace,monospace;color:#cce0ff;min-width:140px}
+.cube-time strong{color:#c9f8c6}
+.cube-edit{display:flex;gap:6px;align-items:center;font-size:12px;color:#e5eaff}
+.cube-edit input{width:85px;font-size:13px;padding:8px}
+.cube-empty{color:#aab8d1;padding:30px;text-align:center;border:1px dashed #526a91;border-radius:12px}
+@media(max-width:650px){.time-cube{padding:11px}.cube-row{gap:8px}.cube-index{min-width:20px}.cube-word{min-width:80px}}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;main&gt;&lt;h1&gt;Word Backlog → Word Being&lt;/h1&gt;&lt;p&gt;Paste a document, collect 4–5-word phrases into a table, then click words to place them inside a being. Choose a body part first or drag words onto it.&lt;/p&gt;&lt;div class=&quot;layout&quot;&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;1. Paste your document&lt;/h2&gt;&lt;textarea id=&quot;doc&quot; placeholder=&quot;Paste any document here...&quot;&gt;&lt;/textarea&gt;&lt;div class=&quot;row&quot;&gt;&lt;label&gt;Phrase size &lt;select id=&quot;size&quot;&gt;&lt;option value=&quot;4&quot;&gt;4 words&lt;/option&gt;&lt;option value=&quot;5&quot;&gt;5 words&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;button class=&quot;primary&quot; id=&quot;split&quot;&gt;Create word groups&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;hint&quot;&gt;Click a phrase to save it to the backlog. You can also highlight text in the document and save your selection.&lt;/div&gt;&lt;div class=&quot;row&quot;&gt;&lt;button id=&quot;highlight&quot;&gt;Save highlighted text&lt;/button&gt;&lt;button id=&quot;all&quot;&gt;Save all groups&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;groups&quot; id=&quot;groups&quot;&gt;&lt;/div&gt;&lt;p class=&quot;status&quot; id=&quot;status&quot;&gt;&lt;/p&gt;&lt;/section&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;2. Word backlog table&lt;/h2&gt;&lt;div class=&quot;row&quot;&gt;&lt;input id=&quot;custom&quot; placeholder=&quot;Add a word or phrase&quot; aria-label=&quot;New word&quot;&gt;&lt;button id=&quot;addCustom&quot;&gt;Add&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;row&quot;&gt;&lt;input id=&quot;search&quot; placeholder=&quot;Search table...&quot; aria-label=&quot;Search table&quot;&gt;&lt;button id=&quot;clearBacklog&quot;&gt;Clear backlog&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;scroll&quot;&gt;&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;#&lt;/th&gt;&lt;th&gt;Words / phrases&lt;/th&gt;&lt;th&gt;Insert&lt;/th&gt;&lt;th&gt;Delete&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody id=&quot;rows&quot;&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;&lt;div class=&quot;section&quot;&gt;&lt;h2&gt;Individual words from backlog&lt;/h2&gt;&lt;p class=&quot;hint&quot;&gt;Click a word, then click a body part to insert it there. You can also drag a word onto a body part.&lt;/p&gt;&lt;div id=&quot;tokens&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;/section&gt;
+&lt;section class=&quot;panel&quot;&gt;&lt;h2&gt;3. Build a being with words&lt;/h2&gt;&lt;div class=&quot;insertbox&quot;&gt;&lt;div class=&quot;hint&quot;&gt;SELECT WORDS FROM TABLE → CLICK A BODY PART&lt;/div&gt;&lt;div class=&quot;selectedword&quot; id=&quot;picked&quot;&gt;No words selected yet&lt;/div&gt;&lt;div class=&quot;row&quot;&gt;&lt;button id=&quot;cancelPick&quot;&gt;Cancel selection&lt;/button&gt;&lt;/div&gt;&lt;label class=&quot;hint&quot; for=&quot;directWord&quot;&gt;Or type words directly onto the being&lt;/label&gt;&lt;input id=&quot;directWord&quot; placeholder=&quot;Type a word or phrase...&quot;&gt;&lt;div class=&quot;row&quot;&gt;&lt;button class=&quot;primary&quot; id=&quot;insertDirect&quot;&gt;Insert typed words into selected part&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;row&quot;&gt;&lt;label&gt;Insert into &lt;select id=&quot;target&quot;&gt;&lt;option value=&quot;head&quot;&gt;Head&lt;/option&gt;&lt;option value=&quot;torso&quot;&gt;Body&lt;/option&gt;&lt;option value=&quot;armL&quot;&gt;Left arm&lt;/option&gt;&lt;option value=&quot;armR&quot;&gt;Right arm&lt;/option&gt;&lt;option value=&quot;legL&quot;&gt;Left leg&lt;/option&gt;&lt;option value=&quot;legR&quot;&gt;Right leg&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;&lt;div class=&quot;being&quot; id=&quot;being&quot;&gt;&lt;div class=&quot;part head&quot; data-part=&quot;head&quot;&gt;&lt;strong&gt;HEAD&lt;/strong&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;part torso&quot; data-part=&quot;torso&quot;&gt;&lt;strong&gt;BODY&lt;/strong&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;part armL&quot; data-part=&quot;armL&quot;&gt;&lt;strong&gt;LEFT ARM&lt;/strong&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;part armR&quot; data-part=&quot;armR&quot;&gt;&lt;strong&gt;RIGHT ARM&lt;/strong&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;part legL&quot; data-part=&quot;legL&quot;&gt;&lt;strong&gt;LEFT LEG&lt;/strong&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;part legR&quot; data-part=&quot;legR&quot;&gt;&lt;strong&gt;RIGHT LEG&lt;/strong&gt;&lt;span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;footer&quot;&gt;&lt;button id=&quot;undo&quot;&gt;Undo last insertion&lt;/button&gt;&lt;button id=&quot;reset&quot;&gt;Clear being&lt;/button&gt;&lt;button class=&quot;primary&quot; id=&quot;download&quot;&gt;Export being as JSON&lt;/button&gt;&lt;/div&gt;&lt;p class=&quot;hint&quot;&gt;Click a body part to select it, or to place the word you picked. Double-click a body part to clear only that part. Your table and being are saved in this browser.&lt;/p&gt;&lt;/section&gt;
+&lt;/div&gt;
+&lt;section class=&quot;cube-panel&quot; id=&quot;timingCubesPanel&quot;&gt;
+  &lt;h2&gt;4. Stacked Word Timing Cubes&lt;/h2&gt;
+  &lt;p class=&quot;hint&quot;&gt;Each cube represents one word. Set its estimated duration; the start and expected finish times of later cubes update automatically. Uses backlog words, or the pasted document when the backlog is empty.&lt;/p&gt;
+  &lt;div class=&quot;cube-controls&quot;&gt;&lt;label&gt;Default seconds per word &lt;input type=&quot;number&quot; id=&quot;cubeDefault&quot; min=&quot;0.1&quot; step=&quot;0.1&quot; value=&quot;1.0&quot;&gt;&lt;/label&gt;&lt;button class=&quot;primary&quot; id=&quot;makeCubes&quot;&gt;Build / Refresh Cube Stack&lt;/button&gt;&lt;button id=&quot;resetCubeTimes&quot;&gt;Reset Estimates&lt;/button&gt;&lt;button id=&quot;exportCubeTimes&quot;&gt;Export Timing JSON&lt;/button&gt;&lt;span class=&quot;hint&quot; id=&quot;cubeTotal&quot;&gt;0 words · 0.0s total&lt;/span&gt;&lt;/div&gt;
+  &lt;div class=&quot;cube-stack&quot; id=&quot;cubeStack&quot;&gt;&lt;/div&gt;
+&lt;/section&gt;
+&lt;/main&gt;&lt;script&gt;
+const $=id=&gt;document.getElementById(id);const parts=[&#x27;head&#x27;,&#x27;torso&#x27;,&#x27;armL&#x27;,&#x27;armR&#x27;,&#x27;legL&#x27;,&#x27;legR&#x27;];const blank=()=&gt;Object.fromEntries(parts.map(p=&gt;[p,[]]));let backlog=[],being=blank(),history=[],groups=[],pending=null;try{const saved=JSON.parse(localStorage.getItem(&#x27;word-being-v1&#x27;)||&#x27;{}&#x27;);backlog=Array.isArray(saved.backlog)?saved.backlog:[];being=Object.assign(blank(),saved.being||{});for(const p of parts)if(!Array.isArray(being[p]))being[p]=[]}catch(e){}const save=()=&gt;localStorage.setItem(&#x27;word-being-v1&#x27;,JSON.stringify({backlog,being}));const status=t=&gt;$(&#x27;status&#x27;).textContent=t;const words=s=&gt;(s.match(/[^\s]+/g)||[]);function add(text){text=text.trim();if(!text)return;backlog.push(text);render();save()}function insert(text,part=$(&#x27;target&#x27;).value){if(!parts.includes(part))return;history.push(JSON.stringify(being));being[part].push(text);render();save()}function pick(text){pending=text;$(&#x27;picked&#x27;).textContent=&#x27;Ready to place: “&#x27;+text+&#x27;” — click HEAD, BODY, ARM, or LEG&#x27;;render()}function clearPick(){pending=null;$(&#x27;picked&#x27;).textContent=&#x27;No words selected yet&#x27;;render()}function insertOnPart(part){if(pending){insert(pending,part);clearPick()}else{$(&#x27;target&#x27;).value=part;render()}}function render(){const q=$(&#x27;search&#x27;).value.toLowerCase();const rows=$(&#x27;rows&#x27;);rows.replaceChildren();backlog.forEach((entry,i)=&gt;{if(!entry.toLowerCase().includes(q))return;const tr=document.createElement(&#x27;tr&#x27;);const no=document.createElement(&#x27;td&#x27;);no.textContent=i+1;const phrase=document.createElement(&#x27;td&#x27;);phrase.textContent=entry;const use=document.createElement(&#x27;td&#x27;);const b=document.createElement(&#x27;button&#x27;);b.textContent=&#x27;Select&#x27;;b.onclick=()=&gt;pick(entry);b.draggable=true;b.ondragstart=e=&gt;e.dataTransfer.setData(&#x27;text/plain&#x27;,entry);use.append(b);b.classList.toggle(&#x27;picked&#x27;,pending===entry);const del=document.createElement(&#x27;td&#x27;);const x=document.createElement(&#x27;button&#x27;);x.textContent=&#x27;×&#x27;;x.setAttribute(&#x27;aria-label&#x27;,&#x27;Delete row&#x27;);x.onclick=()=&gt;{backlog.splice(i,1);render();save()};del.append(x);tr.append(no,phrase,use,del);rows.append(tr)});const tok=$(&#x27;tokens&#x27;);tok.replaceChildren();const unique=[...new Set(backlog.flatMap(words))];unique.forEach(w=&gt;{const b=document.createElement(&#x27;button&#x27;);b.className=&#x27;token&#x27;;b.textContent=w;b.draggable=true;b.onclick=()=&gt;pick(w);b.ondragstart=e=&gt;e.dataTransfer.setData(&#x27;text/plain&#x27;,w);b.classList.toggle(&#x27;picked&#x27;,pending===w);tok.append(b)});if(!unique.length){const s=document.createElement(&#x27;span&#x27;);s.className=&#x27;muted&#x27;;s.textContent=&#x27;Save phrases to generate words here.&#x27;;tok.append(s)}document.querySelectorAll(&#x27;.part&#x27;).forEach(el=&gt;{const p=el.dataset.part;el.querySelector(&#x27;span&#x27;).textContent=being[p].join(&#x27; · &#x27;);el.classList.toggle(&#x27;active&#x27;,p===$(&#x27;target&#x27;).value)})}
+$(&#x27;split&#x27;).onclick=()=&gt;{const w=words($(&#x27;doc&#x27;).value),n=Number($(&#x27;size&#x27;).value);groups=[];for(let i=0;i&lt;w.length;i+=n)groups.push(w.slice(i,i+n).join(&#x27; &#x27;));const el=$(&#x27;groups&#x27;);el.replaceChildren();groups.forEach((g,i)=&gt;{const b=document.createElement(&#x27;button&#x27;);b.className=&#x27;group&#x27;;b.textContent=`${i+1}. ${g}`;b.onclick=()=&gt;{add(g);b.classList.add(&#x27;active&#x27;);status(&#x27;Phrase added to backlog&#x27;)};el.append(b)});status(`${groups.length} groups ready to select.`)};$(&#x27;highlight&#x27;).onclick=()=&gt;{const a=$(&#x27;doc&#x27;);const v=a.value.slice(a.selectionStart,a.selectionEnd).trim();if(!v)return status(&#x27;Highlight words in the document first.&#x27;);add(v);status(&#x27;Selection added to backlog&#x27;)};$(&#x27;all&#x27;).onclick=()=&gt;{if(!groups.length)return status(&#x27;Create word groups first.&#x27;);backlog.push(...groups);render();save();status(`Saved ${groups.length} groups.`)};$(&#x27;addCustom&#x27;).onclick=()=&gt;{add($(&#x27;custom&#x27;).value);$(&#x27;custom&#x27;).value=&#x27;&#x27;};$(&#x27;custom&#x27;).addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Enter&#x27;)$(&#x27;addCustom&#x27;).click()});$(&#x27;search&#x27;).oninput=render;$(&#x27;clearBacklog&#x27;).onclick=()=&gt;{if(confirm(&#x27;Clear every saved word/phrase?&#x27;)){backlog=[];render();save()}};$(&#x27;target&#x27;).onchange=render;$(&#x27;cancelPick&#x27;).onclick=clearPick;$(&#x27;insertDirect&#x27;).onclick=()=&gt;{const value=$(&#x27;directWord&#x27;).value.trim();if(!value)return;$(&#x27;target&#x27;).value=$(&#x27;target&#x27;).value;insert(value);$(&#x27;directWord&#x27;).value=&#x27;&#x27;;clearPick()};$(&#x27;directWord&#x27;).addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Enter&#x27;)$(&#x27;insertDirect&#x27;).click()});document.querySelectorAll(&#x27;.part&#x27;).forEach(el=&gt;{el.onclick=()=&gt;insertOnPart(el.dataset.part);el.ondblclick=()=&gt;{if(confirm(&#x27;Clear words in this body part?&#x27;)){history.push(JSON.stringify(being));being[el.dataset.part]=[];render();save()}};el.ondragover=e=&gt;{e.preventDefault()};el.ondrop=e=&gt;{e.preventDefault();const v=e.dataTransfer.getData(&#x27;text/plain&#x27;);if(v)insert(v,el.dataset.part)}});$(&#x27;undo&#x27;).onclick=()=&gt;{if(history.length){being=JSON.parse(history.pop());render();save()}};$(&#x27;reset&#x27;).onclick=()=&gt;{if(confirm(&#x27;Clear the whole being?&#x27;)){history.push(JSON.stringify(being));being=blank();render();save()}};$(&#x27;download&#x27;).onclick=()=&gt;{const blob=new Blob([JSON.stringify({being,backlog},null,2)],{type:&#x27;application/json&#x27;});const a=document.createElement(&#x27;a&#x27;);a.href=URL.createObjectURL(blob);a.download=&#x27;word-being.json&#x27;;a.click();setTimeout(()=&gt;URL.revokeObjectURL(a.href),1000)};
+// Independent, editable word-by-word stacked cube timing view.
+let cubeItems=[];
+try { const saved=JSON.parse(localStorage.getItem(&#x27;word-cube-timing-v1&#x27;)||&#x27;[]&#x27;); if(Array.isArray(saved)) cubeItems=saved; } catch(e) {}
+const saveCubes=()=&gt;localStorage.setItem(&#x27;word-cube-timing-v1&#x27;,JSON.stringify(cubeItems));
+const cubeWords=()=&gt;words(backlog.length?backlog.join(&#x27; &#x27;):$(&#x27;doc&#x27;).value);
+function buildCubes(reset=false){
+  const arr=cubeWords(),defaultSec=Math.max(.1,Number($(&#x27;cubeDefault&#x27;).value)||1);
+  cubeItems=arr.map((word,i)=&gt;({word,seconds:(!reset&amp;&amp;cubeItems[i]?.word===word&amp;&amp;Number.isFinite(Number(cubeItems[i].seconds)))?Math.max(.1,Number(cubeItems[i].seconds)):defaultSec}));
+  saveCubes();renderCubes();
+}
+function renderCubes(){
+  const stack=$(&#x27;cubeStack&#x27;);stack.replaceChildren();
+  if(!cubeItems.length){const el=document.createElement(&#x27;div&#x27;);el.className=&#x27;cube-empty&#x27;;el.textContent=&#x27;Paste text or add words to the backlog, then click Build / Refresh Cube Stack.&#x27;;stack.append(el);$(&#x27;cubeTotal&#x27;).textContent=&#x27;0 words · 0.0s total&#x27;;return}
+  let elapsed=0;
+  cubeItems.forEach((item,i)=&gt;{
+    const start=elapsed;elapsed+=Number(item.seconds)||0;
+    const row=document.createElement(&#x27;div&#x27;);row.className=&#x27;cube-row&#x27;;
+    const index=document.createElement(&#x27;span&#x27;);index.className=&#x27;cube-index&#x27;;index.textContent=&#x27;#&#x27;+(i+1);
+    const cube=document.createElement(&#x27;div&#x27;);cube.className=&#x27;time-cube&#x27;;
+    const word=document.createElement(&#x27;span&#x27;);word.className=&#x27;cube-word&#x27;;word.textContent=item.word;
+    const times=document.createElement(&#x27;div&#x27;);times.className=&#x27;cube-time&#x27;;times.innerHTML=`Start ${start.toFixed(1)}s&lt;br&gt;&lt;strong&gt;Finish ≈ ${elapsed.toFixed(1)}s&lt;/strong&gt;`;
+    const edit=document.createElement(&#x27;label&#x27;);edit.className=&#x27;cube-edit&#x27;;edit.textContent=&#x27;Estimate (s) &#x27;;
+    const input=document.createElement(&#x27;input&#x27;);input.type=&#x27;number&#x27;;input.min=&#x27;0.1&#x27;;input.step=&#x27;0.1&#x27;;input.value=item.seconds;input.setAttribute(&#x27;aria-label&#x27;,&#x27;Estimated seconds for &#x27;+item.word+&#x27; occurrence &#x27;+(i+1));
+    input.addEventListener(&#x27;change&#x27;,()=&gt;{let n=Number(input.value);if(!Number.isFinite(n)||n&lt;=0){input.value=item.seconds;return}item.seconds=n;saveCubes();renderCubes()});
+    edit.append(input);cube.append(word,times,edit);row.append(index,cube);stack.append(row);
+  });
+  $(&#x27;cubeTotal&#x27;).textContent=`${cubeItems.length} words · ${elapsed.toFixed(1)}s total`;
+}
+$(&#x27;makeCubes&#x27;).onclick=()=&gt;buildCubes();
+$(&#x27;resetCubeTimes&#x27;).onclick=()=&gt;buildCubes(true);
+$(&#x27;exportCubeTimes&#x27;).onclick=()=&gt;{
+ let elapsed=0;const data=cubeItems.map((i,index)=&gt;{let start=elapsed;elapsed+=Number(i.seconds);return {index:index+1,word:i.word,startSeconds:start,estimatedSeconds:Number(i.seconds),finishSeconds:elapsed}});
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:&#x27;application/json&#x27;});const a=document.createElement(&#x27;a&#x27;);a.href=URL.createObjectURL(blob);a.download=&#x27;word-timing-cubes.json&#x27;;a.click();setTimeout(()=&gt;URL.revokeObjectURL(a.href),1000);
+};
+// Refresh the cube stack when its word source changes, retaining estimates for unchanged words.
+const oldRender=render;
+render=function(){oldRender();buildCubes()};
+$(&#x27;doc&#x27;).addEventListener(&#x27;input&#x27;,()=&gt;{if(!backlog.length)buildCubes()});
+render();
+&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;
+"></iframe>
+</section>
+<script>
+(function(){
+  const frame=document.getElementById('wordBeingEmbedded');
+  frame.addEventListener('load',function(){
+    try{
+      const doc=frame.contentDocument;
+      const resize=()=>{frame.style.height=Math.max(1080,doc.documentElement.scrollHeight,doc.body.scrollHeight)+24+'px';};
+      resize();
+      new ResizeObserver(resize).observe(doc.body);
+      window.addEventListener('resize',resize);
+    }catch(e){frame.style.height='1480px';frame.setAttribute('scrolling','yes');}
+  });
+})();
+</script>
+<section id="fishSection"><h2>Fish Chop Studio</h2><p>The original chopping simulator is preserved below the time-word separator.</p><iframe id="fishEmbedded" title="Fish Chopping Studio" loading="lazy" scrolling="no" srcdoc="&lt;!DOCTYPE html&gt;&lt;html lang=&quot;en&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;UTF-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;&lt;title&gt;Fish Chop Studio&lt;/title&gt;&lt;style&gt;
+:root{font-family:system-ui,Arial,sans-serif;color:#eaf2ff;background:#0e1726}*{box-sizing:border-box}body{margin:0;padding:22px}main{max-width:1040px;margin:auto}header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{margin:0;font-size:25px}p{color:#b4c5df}.panel{background:#192a40;border:1px solid #3b5474;border-radius:16px;padding:18px;margin-top:17px}button,select,input{background:#243c59;color:white;border:1px solid #6381a6;border-radius:9px;padding:10px 12px;font:inherit}button{cursor:pointer}button:hover{background:#355779}.primary{background:#16846d;border-color:#5bd2aa}.primary:hover{background:#1ba887}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}.stage{height:385px;position:relative;background:linear-gradient(135deg,#7b4c2c,#a96f41 50%,#694024);border:10px solid #4e2f22;border-radius:24px;box-shadow:inset 0 0 35px #301b1280;overflow:hidden;touch-action:manipulation}.board{position:absolute;inset:20px 35px;background:repeating-linear-gradient(0deg,#d9aa74 0 24px,#d5a16e 24px 27px);border-radius:28px;border:8px solid #c58e58;box-shadow:inset 0 0 16px #9e673c}.fish{position:absolute;left:50%;top:51%;transform:translate(-50%,-50%);width:78%;height:145px;display:flex;align-items:center;justify-content:center;transition:filter .2s}.segment{height:124px;flex:1;background:linear-gradient(#70c6c8 0%,#4d9da8 40%,#bedfe1 55%,#e6e8dc 80%,#8aa6af);border:1px solid #377b88;position:relative;transition:transform .3s,opacity .3s;box-shadow:0 7px 9px #34231766}.segment:nth-child(1){border-radius:65% 5% 5% 65%;flex:1.5}.segment:nth-child(1):before{content:&#x27;●&#x27;;position:absolute;left:20%;top:25%;font-size:20px;color:#142c37;text-shadow:2px 1px #fff}.segment:nth-last-child(1){border-radius:5% 50% 50% 5%;flex:.8}.segment:nth-last-child(1):after{content:&#x27;&#x27;;position:absolute;right:-55px;top:17px;border-left:62px solid #55a8ac;border-top:44px solid transparent;border-bottom:44px solid transparent}.segment.chopped{transform:translateY(var(--y,12px)) rotate(var(--r,0deg));margin-right:8px}.segment.chopped:nth-child(even){--y:-13px;--r:-4deg}.segment.chopped:nth-child(odd){--y:14px;--r:5deg}.cutmark{position:absolute;top:20%;bottom:20%;width:4px;background:#eefff6;border-radius:4px;opacity:.65;pointer-events:none}.knife{position:absolute;left:50%;top:7%;height:70%;width:8px;background:linear-gradient(90deg,#778ea1,#e2eef2,#93a7b7);border-radius:4px;box-shadow:0 0 10px #ffffff88;transform:rotate(9deg);pointer-events:none;opacity:0}.knife:before{content:&#x27;&#x27;;position:absolute;top:-4px;left:-11px;width:30px;height:70px;border-radius:9px;background:#253347;border:2px solid #647489}.knife.swing{animation:chop .3s ease}@keyframes chop{0%{opacity:0;transform:translateY(-90px) rotate(10deg)}45%{opacity:1;transform:translateY(5px) rotate(10deg)}100%{opacity:0;transform:translateY(-50px) rotate(10deg)}}.status{font-weight:600;color:#a6efcf}.instructions{font-size:13px}.stats{display:flex;gap:12px;flex-wrap:wrap}.stat{background:#102036;border:1px solid #405c7b;border-radius:10px;padding:12px;min-width:130px}.stat strong{display:block;font-size:22px;margin-top:3px}.foot{font-size:12px;color:#91a6c3}@media(max-width:650px){.stage{height:280px}.board{inset:12px}.fish{width:75%;height:95px}.segment{height:84px}.segment:nth-last-child(1):after{right:-28px;border-left-width:35px;border-top-width:28px;border-bottom-width:28px}h1{font-size:22px}}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;main&gt;&lt;header&gt;&lt;div&gt;&lt;h1&gt;🐟 Fish Chop Studio&lt;/h1&gt;&lt;p&gt;Interactive chopping-board software — click Chop to divide your fish into portions.&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;status&quot; id=&quot;status&quot;&gt;Ready to chop&lt;/span&gt;&lt;/header&gt;&lt;section class=&quot;panel&quot;&gt;&lt;div class=&quot;toolbar&quot;&gt;&lt;label&gt;Fish type &lt;select id=&quot;fishType&quot;&gt;&lt;option&gt;Salmon&lt;/option&gt;&lt;option&gt;Tilapia&lt;/option&gt;&lt;option&gt;Tuna&lt;/option&gt;&lt;option&gt;Cod&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;label&gt;Portions &lt;input id=&quot;portionCount&quot; type=&quot;number&quot; min=&quot;2&quot; max=&quot;12&quot; value=&quot;6&quot; style=&quot;width:74px&quot;&gt;&lt;/label&gt;&lt;button class=&quot;primary&quot; id=&quot;chop&quot;&gt;🔪 Chop once&lt;/button&gt;&lt;button id=&quot;all&quot;&gt;Chop all&lt;/button&gt;&lt;button id=&quot;reset&quot;&gt;New fish&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;stage&quot; id=&quot;stage&quot;&gt;&lt;div class=&quot;board&quot;&gt;&lt;/div&gt;&lt;div class=&quot;fish&quot; id=&quot;fish&quot;&gt;&lt;/div&gt;&lt;div class=&quot;knife&quot; id=&quot;knife&quot;&gt;&lt;/div&gt;&lt;/div&gt;&lt;p class=&quot;instructions&quot;&gt;You can also click the cutting board to make the next cut. This is a visual simulator, not a guide to handling a real knife.&lt;/p&gt;&lt;/section&gt;&lt;section class=&quot;panel&quot;&gt;&lt;div class=&quot;stats&quot;&gt;&lt;div class=&quot;stat&quot;&gt;Cuts made&lt;strong id=&quot;cuts&quot;&gt;0&lt;/strong&gt;&lt;/div&gt;&lt;div class=&quot;stat&quot;&gt;Pieces&lt;strong id=&quot;pieces&quot;&gt;1&lt;/strong&gt;&lt;/div&gt;&lt;div class=&quot;stat&quot;&gt;Remaining cuts&lt;strong id=&quot;remaining&quot;&gt;5&lt;/strong&gt;&lt;/div&gt;&lt;/div&gt;&lt;p id=&quot;message&quot;&gt;Your fish is ready. Choose how many portions you want and begin cutting.&lt;/p&gt;&lt;/section&gt;&lt;p class=&quot;foot&quot;&gt;Runs locally in your browser. No account required.&lt;/p&gt;&lt;/main&gt;&lt;script&gt;
+const $=id=&gt;document.getElementById(id);let cuts=0,count=6;function draw(){const fish=$(&#x27;fish&#x27;);fish.replaceChildren();for(let i=0;i&lt;count;i++){const s=document.createElement(&#x27;div&#x27;);s.className=&#x27;segment&#x27;+(i&lt;=cuts&amp;&amp;cuts&gt;0?&#x27; chopped&#x27;:&#x27;&#x27;);fish.append(s)}$(&#x27;cuts&#x27;).textContent=cuts;$(&#x27;pieces&#x27;).textContent=cuts+1;$(&#x27;remaining&#x27;).textContent=count-1-cuts;$(&#x27;status&#x27;).textContent=cuts&gt;=count-1?&#x27;Finished!&#x27;:&#x27;Ready to chop&#x27;;}function reset(){count=Math.max(2,Math.min(12,Math.round(Number($(&#x27;portionCount&#x27;).value)||6)));$(&#x27;portionCount&#x27;).value=count;cuts=0;draw();$(&#x27;message&#x27;).textContent=`Fresh ${$(&#x27;fishType&#x27;).value.toLowerCase()} ready for ${count} portions.`}function chop(){if(cuts&gt;=count-1){$(&#x27;message&#x27;).textContent=&#x27;All portions finished. Select New fish to start again.&#x27;;return;}cuts++;draw();const knife=$(&#x27;knife&#x27;);knife.classList.remove(&#x27;swing&#x27;);void knife.offsetWidth;knife.classList.add(&#x27;swing&#x27;);$(&#x27;message&#x27;).textContent=`Cut ${cuts} complete. ${cuts+1} of ${count} portions separated.`;}$(&#x27;chop&#x27;).onclick=chop;$(&#x27;all&#x27;).onclick=()=&gt;{if(cuts&lt;count-1){cuts=count-2;chop()}};$(&#x27;reset&#x27;).onclick=reset;$(&#x27;fishType&#x27;).onchange=reset;$(&#x27;portionCount&#x27;).onchange=reset;$(&#x27;stage&#x27;).onclick=chop;reset();
+&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;
+"></iframe></section>
+<script>(function(){const frame=document.getElementById('fishEmbedded');frame.addEventListener('load',()=>{try{let d=frame.contentDocument;const size=()=>{frame.style.height=Math.max(930,d.documentElement.scrollHeight,d.body.scrollHeight)+24+'px'};size();new ResizeObserver(size).observe(d.body)}catch(e){frame.setAttribute('scrolling','yes')}})})()</script>
+
+</body>
+</html>

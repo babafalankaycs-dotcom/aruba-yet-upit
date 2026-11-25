@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subject Seek Player</title>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; background: #e9ede9; color: #17312e; font: 16px system-ui, sans-serif; }
+main { max-width: 480px; margin: auto; }
+label { display: block; margin-bottom: 6px; font-weight: 700; }
+#subject, #kind { width: 100%; margin-bottom: 12px; padding: 9px 12px; border: 1px solid #839792; border-radius: 8px; font: inherit; }
+.player-box { padding: 12px; border: 1px solid #839792; border-radius: 16px; background: #fff; }
+.kind-field { margin-top: 12px; }
+#kind { margin-bottom: 0; }
+.player { overflow: hidden; border-radius: 12px; background: #102b29; color: white; }
+.frame { position: relative; aspect-ratio: 1; overflow: hidden; background: #f5f3ed; color: #17312e; }
+#caption { position: absolute; inset: 12px 12px auto; margin: 0; text-align: center; overflow-wrap: anywhere; }
+.dog, .pot { position: absolute; bottom: 28%; font-size: clamp(30px, 12vw, 64px); transform: translateX(-50%); }
+.dog { left: 18%; }
+.dog span { display: inline-block; transform: scaleX(-1); }
+.pot { left: 83%; }
+.controls { padding: 6px 14px 12px; }
+#seek { display: block; width: 100%; margin: 5px 0 8px; accent-color: #ff3652; cursor: pointer; }
+.seek-dots { display: flex; justify-content: center; gap: 7px; margin-top: 8px; }
+.seek-dot { position: relative; display: grid; place-items: center; width: 16px; height: 16px; }
+.seek-dot::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.seek-dot-label { display: none; position: absolute; z-index: 1; bottom: 100%; left: 50%; transform: translateX(-50%); padding: 3px 7px; border-radius: 4px; background: #102b29; color: white; font-size: 12px; }
+.seek-dot:hover .seek-dot-label, .seek-dot:focus .seek-dot-label { display: block; }
+.seek-markers { position: relative; height: 20px; margin: 0 8px 4px; font-size: 12px; }
+.seek-markers span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.transport { display: flex; align-items: center; gap: 12px; }
+button { min-width: 64px; padding: 5px 9px; border: 1px solid #90aca5; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+output { font-size: 14px; font-variant-numeric: tabular-nums; }
+.vibrating-dots { gap: 10px; margin-top: 4px; }
+.vibrating-dots span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: dot-vibration 55ms linear infinite alternate; }
+.vibrating-dots span + span { animation-duration: 70ms; animation-direction: alternate-reverse; }
+@keyframes dot-vibration {
+  from { transform: translateX(-2px); }
+  to { transform: translateX(2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vibrating-dots span { animation: none; }
+}
+</style>
+<main>
+  <label for="subject">Subject</label>
+  <input id="subject" maxlength="80" placeholder="e.g. Dog on a quiet street">
+  <div class="player-box">
+    <section class="player" aria-label="Scene player">
+      <div class="frame">
+        <p id="caption"></p>
+        <div class="dog" role="img" aria-label="Dog"><span aria-hidden="true">🐕</span></div>
+        <div class="pot" role="img" aria-label="Pot">🍲</div>
+      </div>
+      <div class="controls">
+        <input id="seek" type="range" min="0" max="6" step="0.01" value="0" aria-label="Seek through scene">
+        <div class="seek-markers" aria-label="Time markers">
+          <span style="left: 16.6667%">1 s</span>
+          <span style="left: 33.3333%">2 s</span>
+        </div>
+        <div class="transport">
+          <button id="play" type="button">Play</button>
+          <output id="time" for="seek" aria-live="off">0.00 / 6.00 s</output>
+        </div>
+      </div>
+    </section>
+  </div>
+  <div class="seek-dots">
+    <span class="seek-dot" tabindex="0" aria-label="Physics"><span class="seek-dot-label" aria-hidden="true">Physics</span></span>
+    <span class="seek-dot" tabindex="0" aria-label="Atom"><span class="seek-dot-label" aria-hidden="true">Atom</span></span>
+    <span class="seek-dot" tabindex="0" aria-label="Water"><span class="seek-dot-label" aria-hidden="true">Water</span></span>
+  </div>
+  <div class="seek-dots vibrating-dots" aria-hidden="true"><span></span><span></span></div>
+  <div class="kind-field">
+    <label for="kind">Kind</label>
+    <input id="kind" type="text">
+  </div>
+</main>
+<script>
+const subject = document.querySelector('#subject');
+const caption = document.querySelector('#caption');
+const dog = document.querySelector('.dog');
+const seek = document.querySelector('#seek');
+const play = document.querySelector('#play');
+const time = document.querySelector('#time');
+const duration = Number(seek.max);
+let position = 0;
+let frame = null;
+let startedAt;
+
+function renderCaption() {
+  caption.textContent = subject.value.trim();
+}
+
+function render() {
+  dog.style.left = (18 + 44 * position / duration) + '%';
+  seek.value = position.toFixed(2);
+  time.textContent = position.toFixed(2) + ' / ' + duration.toFixed(2) + ' s';
+  seek.setAttribute('aria-valuetext', position.toFixed(2) + ' seconds');
+}
+
+function pause() {
+  cancelAnimationFrame(frame);
+  frame = null;
+  play.textContent = 'Play';
+}
+
+function tick(now) {
+  position = Math.min(duration, (now - startedAt) / 1000);
+  render();
+  if (position === duration) {
+    pause();
+    return;
+  }
+  frame = requestAnimationFrame(tick);
+}
+
+subject.addEventListener('input', renderCaption);
+seek.addEventListener('input', () => {
+  position = Number(seek.value);
+  startedAt = performance.now() - position * 1000;
+  render();
+});
+play.addEventListener('click', () => {
+  if (frame !== null) {
+    pause();
+    return;
+  }
+  if (position === duration) position = 0;
+  startedAt = performance.now() - position * 1000;
+  play.textContent = 'Pause';
+  frame = requestAnimationFrame(tick);
+});
+
+renderCaption();
+render();
+</script>
+</html>
